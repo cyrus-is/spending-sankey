@@ -4,6 +4,8 @@ import { RawTable } from './components/RawTable'
 import { ApiKeyEntry } from './components/ApiKeyEntry'
 import { SankeyChart } from './components/SankeyChart'
 import { TransactionTable } from './components/TransactionTable'
+import { DateFilter } from './components/DateFilter'
+import type { DateRange } from './components/DateFilter'
 import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
@@ -15,6 +17,10 @@ let fileCounter = 0
 
 type AppState = 'idle' | 'categorizing' | 'done'
 
+function toDateStr(d: Date): string {
+  return d.toISOString().substring(0, 10)
+}
+
 export function App() {
   const [files, setFiles] = useState<LoadedFile[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -22,9 +28,38 @@ export function App() {
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [appState, setAppState] = useState<AppState>('idle')
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
 
   // All transactions across all files
   const allTransactions: Transaction[] = files.flatMap((f) => f.transactions)
+
+  // Date bounds
+  const { minDate, maxDate } = useMemo(() => {
+    if (allTransactions.length === 0) return { minDate: '', maxDate: '' }
+    const dates = allTransactions.map((tx) => tx.date.getTime())
+    return {
+      minDate: toDateStr(new Date(Math.min(...dates))),
+      maxDate: toDateStr(new Date(Math.max(...dates))),
+    }
+  }, [allTransactions])
+
+  // Initialize date range to all data when first transactions load
+  useEffect(() => {
+    if (minDate && maxDate && !dateRange.start) {
+      setDateRange({ start: minDate, end: maxDate })
+    }
+  }, [minDate, maxDate, dateRange.start])
+
+  // Filtered transactions based on date range
+  const filteredTransactions = useMemo(() => {
+    if (!dateRange.start || !dateRange.end) return allTransactions
+    const start = new Date(dateRange.start).getTime()
+    const end = new Date(dateRange.end + 'T23:59:59').getTime()
+    return allTransactions.filter(
+      (tx) => tx.date.getTime() >= start && tx.date.getTime() <= end,
+    )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTransactions.length, overrides, dateRange])
 
   // Check for categorized transactions (any with non-default category from Claude)
   const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
@@ -87,7 +122,6 @@ export function App() {
         (done, total) => setProgress({ done, total }),
       )
 
-      // Apply categories back to transactions in files
       const resultMap = new Map(results.map((r) => [r.id, r]))
 
       setFiles((prev) =>
@@ -119,9 +153,9 @@ export function App() {
     allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
 
   const sankeyData = useMemo(
-    () => (hasCategorized ? buildSankeyData(allTransactions, overrides) : null),
+    () => (hasCategorized ? buildSankeyData(filteredTransactions, overrides) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasCategorized, allTransactions.length, overrides],
+    [hasCategorized, filteredTransactions.length, overrides, dateRange],
   )
 
   return (
@@ -138,11 +172,17 @@ export function App() {
 
         {error && <div className="error-banner">{error}</div>}
 
-        {files.length > 0 && (
+        {allTransactions.length > 0 && (
           <div className="file-summary">
             <span>{files.length} file{files.length !== 1 ? 's' : ''} loaded</span>
             <span className="file-summary__sep">·</span>
-            <span>{allTransactions.length} transactions parsed</span>
+            <span>{allTransactions.length} transactions total</span>
+            {hasCategorized && filteredTransactions.length !== allTransactions.length && (
+              <>
+                <span className="file-summary__sep">·</span>
+                <span>{filteredTransactions.length} in range</span>
+              </>
+            )}
           </div>
         )}
 
@@ -164,11 +204,20 @@ export function App() {
           </div>
         )}
 
+        {hasCategorized && minDate && (
+          <DateFilter
+            range={dateRange}
+            minDate={minDate}
+            maxDate={maxDate}
+            onChange={setDateRange}
+          />
+        )}
+
         {sankeyData && <SankeyChart data={sankeyData} />}
 
         {hasCategorized ? (
           <TransactionTable
-            transactions={allTransactions}
+            transactions={filteredTransactions}
             overrides={overrides}
             onOverride={handleOverride}
           />
