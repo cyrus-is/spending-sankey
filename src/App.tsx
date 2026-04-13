@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { RawTable } from './components/RawTable'
 import { ApiKeyEntry } from './components/ApiKeyEntry'
@@ -30,6 +30,7 @@ export function App() {
   const [appState, setAppState] = useState<AppState>('idle')
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
+  const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files
   const allTransactions: Transaction[] = files.flatMap((f) => f.transactions)
@@ -66,7 +67,7 @@ export function App() {
   const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
 
   // Files where format detection failed (no transactions parsed)
-  const parseFailedFiles = files.filter((f) => f.rawRows.length > 0 && f.transactions.length === 0)
+  const parseFailedFiles = files.filter((f) => (f.rawRows?.length ?? 0) > 0 && f.transactions.length === 0)
 
   const handleApiKey = useCallback((key: string) => {
     setApiKey(key)
@@ -80,19 +81,25 @@ export function App() {
       const loaded = await Promise.all(
         newFiles.map(async (f): Promise<LoadedFile> => {
           const { headers, rows } = await readCsvFile(f)
-          let transactions: Transaction[] = []
           try {
             const mapping = detectFormat(headers, rows)
-            transactions = parseTransactions(f.name, rows, mapping)
+            const transactions = parseTransactions(f.name, rows, mapping)
+            // Parse succeeded — drop rawRows to free memory
+            return {
+              id: `file-${++fileCounter}`,
+              name: f.name,
+              rawHeaders: headers,
+              transactions,
+            }
           } catch {
-            // format detection failed — show raw table, user can correct with Claude
-          }
-          return {
-            id: `file-${++fileCounter}`,
-            name: f.name,
-            rawHeaders: headers,
-            rawRows: rows,
-            transactions,
+            // Format detection failed — keep rawRows so RawTable can show them
+            return {
+              id: `file-${++fileCounter}`,
+              name: f.name,
+              rawHeaders: headers,
+              rawRows: rows,
+              transactions: [],
+            }
           }
         }),
       )
@@ -134,13 +141,18 @@ export function App() {
     setAppState('categorizing')
     setProgress({ done: 0, total: allTransactions.length })
 
+    const controller = new AbortController()
+    abortRef.current = controller
+
     try {
       const results = await categorizeTransactions(
         allTransactions,
         apiKey,
         (done, total) => setProgress({ done, total }),
+        controller.signal,
       )
 
+      // All batches succeeded — apply atomically
       const resultMap = new Map(results.map((r) => [r.id, r]))
 
       setFiles((prev) =>
@@ -155,12 +167,21 @@ export function App() {
       )
       setAppState('done')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Categorization failed')
+      const msg = e instanceof Error ? e.message : 'Categorization failed'
+      // Don't show "cancelled" as an error — it was intentional
+      if (!controller.signal.aborted) {
+        setError(msg)
+      }
       setAppState('idle')
     } finally {
       setProgress(null)
+      abortRef.current = null
     }
   }, [apiKey, allTransactions])
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort()
+  }, [])
 
   // Reset to idle when files change
   useEffect(() => {
@@ -255,6 +276,9 @@ export function App() {
             <span className="progress-label">
               Categorizing… {progress.done}/{progress.total}
             </span>
+            <button className="progress-cancel" onClick={handleCancel} aria-label="Cancel categorization">
+              Cancel
+            </button>
           </div>
         )}
 

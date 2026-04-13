@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Transaction } from './types'
+import { CATEGORIES } from './types'
 
 interface CategorizationResult {
   id: string
@@ -31,74 +32,108 @@ Respond ONLY with a JSON array, no other text. Each element: {"id": "...", "cate
 
 const BATCH_SIZE = 50
 
+const VALID_CATEGORIES = new Set<string>(CATEGORIES)
+
+/** Parse and validate a batch response from Claude. Throws with a descriptive message on any issue. */
+function parseBatchResponse(text: string, requestedIds: string[]): CategorizationResult[] {
+  if (!text.trim()) {
+    throw new Error('Claude returned an empty response for a categorization batch.')
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error(
+      `Claude returned non-JSON for a categorization batch. Raw response: ${text.substring(0, 200)}`,
+    )
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(
+      `Expected an array from Claude, got: ${typeof parsed}. Response: ${text.substring(0, 200)}`,
+    )
+  }
+
+  const results: CategorizationResult[] = []
+  const returnedIds = new Set<string>()
+
+  for (const item of parsed) {
+    if (typeof item !== 'object' || item === null) {
+      throw new Error(`Batch item is not an object: ${JSON.stringify(item)}`)
+    }
+    const obj = item as Record<string, unknown>
+
+    if (typeof obj['id'] !== 'string' || !obj['id']) {
+      throw new Error(`Batch item missing string 'id': ${JSON.stringify(item)}`)
+    }
+    if (typeof obj['category'] !== 'string' || !VALID_CATEGORIES.has(obj['category'])) {
+      // Use 'Other' rather than crashing on unknown category — Claude may hallucinate new ones
+      obj['category'] = 'Other'
+    }
+    if (typeof obj['subcategory'] !== 'string') {
+      obj['subcategory'] = ''
+    }
+
+    returnedIds.add(obj['id'] as string)
+    results.push({
+      id: obj['id'] as string,
+      category: obj['category'] as string,
+      subcategory: obj['subcategory'] as string,
+    })
+  }
+
+  // Warn about missing IDs — fill them in as 'Other' so no transaction is silently dropped
+  for (const id of requestedIds) {
+    if (!returnedIds.has(id)) {
+      results.push({ id, category: 'Other', subcategory: '' })
+    }
+  }
+
+  return results
+}
+
 export async function categorizeTransactions(
   transactions: Transaction[],
   apiKey: string,
   onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<CategorizationResult[]> {
   const client = new Anthropic({
     apiKey,
     dangerouslyAllowBrowser: true,
   })
 
-  const results: CategorizationResult[] = []
   const total = transactions.length
+  // Collect all batch results before returning — caller applies atomically
+  const allResults: CategorizationResult[] = []
 
   for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+    if (signal?.aborted) {
+      throw new Error('Categorization cancelled.')
+    }
+
     const batch = transactions.slice(i, i + BATCH_SIZE)
     const items = batch.map((tx) => ({
       id: tx.id,
       description: tx.description,
-      amount: tx.amount,
       type: tx.type,
     }))
+    const requestedIds = batch.map((tx) => tx.id)
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(items),
-        },
-      ],
+      messages: [{ role: 'user', content: JSON.stringify(items) }],
     })
 
     const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
-    const parsed = JSON.parse(text) as CategorizationResult[]
-    results.push(...parsed)
+    const batchResults = parseBatchResponse(text, requestedIds)
+    allResults.push(...batchResults)
 
-    onProgress?.(Math.min(i + BATCH_SIZE, total), total)
+    onProgress?.(Math.min(i + batch.length, total), total)
   }
 
-  return results
-}
-
-/** Use Claude to detect the column mapping for a CSV that our heuristics couldn't parse */
-export async function detectFormatWithClaude(
-  headers: string[],
-  sampleRows: Record<string, string>[],
-  apiKey: string,
-): Promise<{ date: string; description: string; amount?: string; debit?: string; credit?: string }> {
-  const client = new Anthropic({
-    apiKey,
-    dangerouslyAllowBrowser: true,
-  })
-
-  const prompt = `Here are the headers and first few rows of a bank CSV file. Identify which columns contain: date, description/merchant name, and amount (or separate debit/credit columns).
-
-Headers: ${JSON.stringify(headers)}
-Sample rows: ${JSON.stringify(sampleRows.slice(0, 3))}
-
-Respond with JSON only: {"date": "column name", "description": "column name", "amount": "column name or null", "debit": "column name or null", "credit": "column name or null"}`
-
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 256,
-    messages: [{ role: 'user', content: prompt }],
-  })
-
-  const text = response.content[0]?.type === 'text' ? response.content[0].text : '{}'
-  return JSON.parse(text) as { date: string; description: string; amount?: string; debit?: string; credit?: string }
+  return allResults
 }

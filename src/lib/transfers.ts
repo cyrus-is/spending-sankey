@@ -2,28 +2,29 @@ import type { Transaction } from './types'
 
 /** Match transactions that are likely transfers between own accounts.
  * Strategy:
- * 1. Flag by description keywords (Zelle, Venmo, Transfer, etc.)
+ * 1. Flag by specific transfer-service keywords only (not generic "transfer" or "payment")
  * 2. For multi-file uploads, match debit+credit pairs with same amount ± 1% within 3 days
+ *
+ * Intentionally NOT matching: "transfer", "payment to/from", "autopay", "bill pay" — these
+ * are too broad and flag real expenses (e.g. "PAYMENT TO DENTIST", "AUTOPAY INSURANCE").
  */
 export function detectTransfers(transactions: Transaction[]): Set<string> {
   const transferIds = new Set<string>()
 
-  // Phase 1: keyword detection
+  // Phase 1: unambiguous transfer-service keywords only
   const TRANSFER_PATTERNS = [
-    /transfer/i,
-    /zelle/i,
-    /venmo/i,
-    /cashapp|cash app/i,
-    /paypal/i,
-    /payment to/i,
-    /payment from/i,
-    /online transfer/i,
-    /account transfer/i,
-    /internal transfer/i,
-    /ach transfer/i,
-    /wire transfer/i,
-    /autopay/i,
-    /bill pay/i,
+    /\bzelle\b/i,
+    /\bvenmo\b/i,
+    /cashapp|cash\s+app/i,
+    /\bpaypal\s+transfer/i,       // "PayPal Transfer" — not "PayPal *MERCHANT"
+    /online\s+transfer/i,
+    /account\s+transfer/i,
+    /internal\s+transfer/i,
+    /ach\s+transfer/i,
+    /wire\s+transfer/i,
+    /funds\s+transfer/i,
+    /transfer\s+(from|to)\b/i,    // "Transfer from Checking", "Transfer to Savings"
+    /\bxfer\b/i,
   ]
 
   for (const tx of transactions) {
@@ -33,7 +34,6 @@ export function detectTransfers(transactions: Transaction[]): Set<string> {
   }
 
   // Phase 2: amount matching across files (same amount ± 1%, within 3 days, different files)
-  // Only run if we have transactions from multiple source files
   const sourceFiles = new Set(transactions.map((tx) => tx.sourceFile))
   if (sourceFiles.size > 1) {
     const debits = transactions.filter((tx) => tx.type === 'debit' && !transferIds.has(tx.id))

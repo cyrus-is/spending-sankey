@@ -16,7 +16,8 @@ export interface LoadedFile {
   id: string
   name: string
   rawHeaders: string[]
-  rawRows: Record<string, string>[]
+  /** Present only when format detection failed (shown in RawTable). Dropped after successful parse. */
+  rawRows?: Record<string, string>[]
   transactions: Transaction[]
 }
 
