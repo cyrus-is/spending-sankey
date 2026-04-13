@@ -16,7 +16,7 @@ import type { LoadedFile, Transaction } from './lib/types'
 
 let fileCounter = 0
 
-type AppState = 'idle' | 'categorizing' | 'done'
+type AppState = 'idle' | 'loading' | 'categorizing' | 'done'
 
 function toDateStr(d: Date): string {
   return d.toISOString().substring(0, 10)
@@ -65,6 +65,9 @@ export function App() {
   // Check for categorized transactions (any with non-default category from Claude)
   const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
 
+  // Files where format detection failed (no transactions parsed)
+  const parseFailedFiles = files.filter((f) => f.rawRows.length > 0 && f.transactions.length === 0)
+
   const handleApiKey = useCallback((key: string) => {
     setApiKey(key)
     storeApiKey(key)
@@ -72,6 +75,7 @@ export function App() {
 
   const handleFiles = useCallback(async (newFiles: File[]) => {
     setError(null)
+    setAppState('loading')
     try {
       const loaded = await Promise.all(
         newFiles.map(async (f): Promise<LoadedFile> => {
@@ -81,7 +85,7 @@ export function App() {
             const mapping = detectFormat(headers, rows)
             transactions = parseTransactions(f.name, rows, mapping)
           } catch {
-            // format detection failed — show raw table, will use Claude for detection
+            // format detection failed — show raw table, user can correct with Claude
           }
           return {
             id: `file-${++fileCounter}`,
@@ -111,6 +115,8 @@ export function App() {
       })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to read file')
+    } finally {
+      setAppState('idle')
     }
   }, [])
 
@@ -171,6 +177,8 @@ export function App() {
     [hasCategorized, filteredTransactions.length, overrides, dateRange],
   )
 
+  const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
+
   return (
     <div className="app">
       <header className="app-header">
@@ -181,15 +189,36 @@ export function App() {
       <main className="app-main">
         <ApiKeyEntry onKey={handleApiKey} hasKey={!!apiKey} />
 
-        <DropZone onFiles={handleFiles} disabled={appState === 'categorizing'} />
+        <DropZone onFiles={handleFiles} disabled={appState === 'categorizing' || appState === 'loading'} />
 
-        {error && <div className="error-banner">{error}</div>}
+        {appState === 'loading' && (
+          <div className="loading-state">
+            <span className="loading-spinner" />
+            Reading files…
+          </div>
+        )}
+
+        {error && (
+          <div className="error-banner">
+            <span>{error}</span>
+            <button className="error-banner__dismiss" onClick={() => setError(null)} aria-label="Dismiss">✕</button>
+          </div>
+        )}
+
+        {parseFailedFiles.length > 0 && (
+          <div className="warn-banner">
+            <strong>Format detection failed</strong> for: {parseFailedFiles.map((f) => f.name).join(', ')}.
+            {apiKey
+              ? ' Categorize with Claude above to parse these files.'
+              : ' Add a Claude API key above to auto-detect the format.'}
+          </div>
+        )}
 
         {allTransactions.length > 0 && (
           <div className="file-summary">
             <span>{files.length} file{files.length !== 1 ? 's' : ''} loaded</span>
             <span className="file-summary__sep">·</span>
-            <span>{allTransactions.length} transactions total</span>
+            <span>{allTransactions.length} transactions</span>
             {hasCategorized && filteredTransactions.length !== allTransactions.length && (
               <>
                 <span className="file-summary__sep">·</span>
@@ -200,9 +229,21 @@ export function App() {
         )}
 
         {showCategorizeBtn && (
-          <button className="categorize-btn" onClick={handleCategorize}>
-            Categorize with Claude ({allTransactions.length} transactions)
-          </button>
+          <div className="categorize-wrap">
+            <button className="categorize-btn" onClick={handleCategorize}>
+              Categorize with Claude
+            </button>
+            <p className="categorize-hint">
+              Sends merchant names to Claude API to classify {allTransactions.length} transactions into spending categories.
+              Amounts are never sent.
+            </p>
+          </div>
+        )}
+
+        {!apiKey && allTransactions.length > 0 && !hasCategorized && (
+          <div className="warn-banner">
+            No API key set. Add your Claude API key above to categorize transactions and see the Sankey diagram.
+          </div>
         )}
 
         {appState === 'categorizing' && progress && (
@@ -226,7 +267,16 @@ export function App() {
           />
         )}
 
-        {sankeyData && <SankeyChart data={sankeyData} />}
+        {sankeyIsEmpty ? (
+          <div className="empty-state">
+            <p>No income or expenses to display for this date range.</p>
+            <p className="empty-state__hint">
+              Try expanding the date range, or check that transfers aren't masking income/expenses.
+            </p>
+          </div>
+        ) : (
+          sankeyData && <SankeyChart data={sankeyData} />
+        )}
 
         {hasCategorized ? (
           <TransactionTable
