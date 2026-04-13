@@ -11,6 +11,7 @@ import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
 import { categorizeTransactions } from './lib/categorize'
 import { buildSankeyData } from './lib/sankey'
+import { detectTransfers } from './lib/transfers'
 import type { LoadedFile, Transaction } from './lib/types'
 
 let fileCounter = 0
@@ -94,7 +95,19 @@ export function App() {
       setFiles((prev) => {
         const existingNames = new Set(prev.map((f) => f.name))
         const fresh = loaded.filter((f) => !existingNames.has(f.name))
-        return [...prev, ...fresh]
+        const next = [...prev, ...fresh]
+
+        // Run transfer detection across all loaded files
+        const allTx = next.flatMap((f) => f.transactions)
+        const transferIds = detectTransfers(allTx)
+        if (transferIds.size === 0) return next
+
+        return next.map((file) => ({
+          ...file,
+          transactions: file.transactions.map((tx) =>
+            transferIds.has(tx.id) ? { ...tx, category: 'Transfer' } : tx,
+          ),
+        }))
       })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to read file')
