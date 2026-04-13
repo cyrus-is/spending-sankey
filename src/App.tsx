@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { RawTable } from './components/RawTable'
 import { ApiKeyEntry } from './components/ApiKeyEntry'
-import { getStoredApiKey, storeApiKey } from './lib/apiKey'
+import { SankeyChart } from './components/SankeyChart'
 import { TransactionTable } from './components/TransactionTable'
+import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
 import { categorizeTransactions } from './lib/categorize'
+import { buildSankeyData } from './lib/sankey'
 import type { LoadedFile, Transaction } from './lib/types'
 
 let fileCounter = 0
@@ -116,6 +118,12 @@ export function App() {
   const showCategorizeBtn =
     allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
 
+  const sankeyData = useMemo(
+    () => (hasCategorized ? buildSankeyData(allTransactions, overrides) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [hasCategorized, allTransactions.length, overrides],
+  )
+
   return (
     <div className="app">
       <header className="app-header">
@@ -155,6 +163,8 @@ export function App() {
             </span>
           </div>
         )}
+
+        {sankeyData && <SankeyChart data={sankeyData} />}
 
         {hasCategorized ? (
           <TransactionTable

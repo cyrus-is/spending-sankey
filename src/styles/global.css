@@ -443,3 +443,57 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* SankeyChart */
+.sankey-wrap {
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.sankey-summary {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sankey-summary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sankey-summary__label {
+  font-size: 0.75rem;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sankey-summary__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.sankey-summary__item--income .sankey-summary__value {
+  color: #68d391;
+}
+
+.sankey-summary__item--expense .sankey-summary__value {
+  color: #fc8181;
+}
+
+.sankey-summary__item--positive .sankey-summary__value {
+  color: #68d391;
+}
+
+.sankey-summary__item--negative .sankey-summary__value {
+  color: #fc8181;
+}
+
+.sankey-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
