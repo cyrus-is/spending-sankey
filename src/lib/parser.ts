@@ -1,0 +1,196 @@
+import type { Transaction } from './types'
+
+/** Detected column mapping for a CSV file */
+export interface ColumnMapping {
+  date: string
+  description: string
+  /** Single signed amount column (positive = debit, negative = credit, or vice versa) */
+  amount?: string
+  /** Separate debit column (positive = money out) */
+  debit?: string
+  /** Separate credit column (positive = money in) */
+  credit?: string
+  /** Optional transaction type column */
+  type?: string
+  /** If true, positive in `amount` means credit (income). Default: false (positive = debit) */
+  positiveIsCredit?: boolean
+}
+
+// Common column name patterns for each field
+const DATE_PATTERNS = [
+  /^date$/i, /^transaction.?date$/i, /^posted.?date$/i, /^trans.?date$/i,
+  /^posting.?date$/i, /^settlement.?date$/i,
+]
+const DESC_PATTERNS = [
+  /^description$/i, /^memo$/i, /^transaction.?description$/i, /^details$/i,
+  /^payee$/i, /^merchant$/i, /^reference$/i, /^name$/i, /^narrative$/i,
+  /^original.?description$/i,
+]
+const AMOUNT_PATTERNS = [
+  /^amount$/i, /^transaction.?amount$/i, /^trans.?amount$/i,
+]
+const DEBIT_PATTERNS = [
+  /^debit$/i, /^withdrawal$/i, /^debit.?amount$/i, /^withdrawals?$/i,
+  /^money.?out$/i, /^payment$/i,
+]
+const CREDIT_PATTERNS = [
+  /^credit$/i, /^deposit$/i, /^credit.?amount$/i, /^deposits?$/i,
+  /^money.?in$/i,
+]
+
+function matchesAny(col: string, patterns: RegExp[]): boolean {
+  return patterns.some((p) => p.test(col))
+}
+
+/** Detect the column mapping from CSV headers and first few rows */
+export function detectFormat(
+  headers: string[],
+  rows: Record<string, string>[],
+): ColumnMapping {
+  const dateCol = headers.find((h) => matchesAny(h, DATE_PATTERNS))
+  const descCol = headers.find((h) => matchesAny(h, DESC_PATTERNS))
+  const amountCol = headers.find((h) => matchesAny(h, AMOUNT_PATTERNS))
+  const debitCol = headers.find((h) => matchesAny(h, DEBIT_PATTERNS))
+  const creditCol = headers.find((h) => matchesAny(h, CREDIT_PATTERNS))
+
+  if (!dateCol) throw new Error(`Could not detect date column. Headers: ${headers.join(', ')}`)
+  if (!descCol) throw new Error(`Could not detect description column. Headers: ${headers.join(', ')}`)
+
+  // Determine if positive amount = credit (income) for single-column banks
+  // Detect by sampling: if most non-empty amounts are positive and we see "credit" in type col
+  let positiveIsCredit = false
+  if (amountCol) {
+    const typeCol = headers.find((h) => /^type$/i.test(h) || /^transaction.?type$/i.test(h))
+    if (typeCol) {
+      const sample = rows.slice(0, 20)
+      const creditRows = sample.filter(
+        (r) => /credit/i.test(r[typeCol] ?? '') && parseFloat((r[amountCol] ?? '').replace(/[$,]/g, '')) > 0,
+      )
+      if (creditRows.length > 0) positiveIsCredit = true
+    }
+  }
+
+  const mapping: ColumnMapping = { date: dateCol, description: descCol }
+  if (amountCol) {
+    mapping.amount = amountCol
+    mapping.positiveIsCredit = positiveIsCredit
+  }
+  if (debitCol) mapping.debit = debitCol
+  if (creditCol) mapping.credit = creditCol
+
+  return mapping
+}
+
+/** Parse a date string into a Date object, trying common formats */
+export function parseDate(raw: string): Date {
+  const s = raw.trim()
+
+  // ISO: 2024-01-15 — parse as local time (not UTC)
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) {
+    const d = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
+    if (!isNaN(d.getTime())) return d
+  }
+
+  // MM/DD/YYYY or MM/DD/YY
+  const mdyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/)
+  if (mdyMatch) {
+    const [, mm, dd, yyyy] = mdyMatch
+    const year = yyyy.length === 2 ? parseInt(yyyy) + 2000 : parseInt(yyyy)
+    return new Date(year, parseInt(mm) - 1, parseInt(dd))
+  }
+
+  // DD/MM/YYYY
+  const dmyMatch = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/)
+  if (dmyMatch) {
+    const [, dd, mm, yyyy] = dmyMatch
+    return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd))
+  }
+
+  // Month DD, YYYY: "Jan 15, 2024" or "January 15, 2024"
+  const d = new Date(s)
+  if (!isNaN(d.getTime())) return d
+
+  throw new Error(`Cannot parse date: "${raw}"`)
+}
+
+/** Parse an amount string to a number. Returns the raw numeric value. */
+function parseAmount(raw: string): number {
+  // Remove currency symbols, spaces, commas; handle parentheses as negative
+  let s = raw.trim()
+  const negative = s.startsWith('(') && s.endsWith(')')
+  s = s.replace(/[()$€£¥,\s]/g, '')
+  const n = parseFloat(s)
+  if (isNaN(n)) return 0
+  return negative ? -Math.abs(n) : n
+}
+
+let txCounter = 0
+
+/** Normalize raw CSV rows into Transactions using the detected format */
+export function parseTransactions(
+  sourceFile: string,
+  rows: Record<string, string>[],
+  mapping: ColumnMapping,
+): Transaction[] {
+  const transactions: Transaction[] = []
+
+  for (const row of rows) {
+    const rawDate = row[mapping.date] ?? ''
+    const description = (row[mapping.description] ?? '').trim()
+
+    if (!rawDate || !description) continue
+
+    let date: Date
+    try {
+      date = parseDate(rawDate)
+    } catch {
+      continue // skip unparseable rows
+    }
+
+    let amount: number
+    let type: 'debit' | 'credit'
+
+    if (mapping.amount) {
+      const raw = parseAmount(row[mapping.amount] ?? '0')
+      if (mapping.positiveIsCredit) {
+        // positive = income
+        amount = raw >= 0 ? raw : Math.abs(raw)
+        type = raw >= 0 ? 'credit' : 'debit'
+      } else {
+        // positive = expense (most banks)
+        amount = Math.abs(raw)
+        type = raw < 0 ? 'credit' : 'debit'
+      }
+    } else if (mapping.debit !== undefined || mapping.credit !== undefined) {
+      const debitRaw = mapping.debit ? parseAmount(row[mapping.debit] ?? '') : 0
+      const creditRaw = mapping.credit ? parseAmount(row[mapping.credit] ?? '') : 0
+
+      if (debitRaw !== 0) {
+        amount = Math.abs(debitRaw)
+        type = 'debit'
+      } else if (creditRaw !== 0) {
+        amount = Math.abs(creditRaw)
+        type = 'credit'
+      } else {
+        continue // no amount found, skip
+      }
+    } else {
+      continue // no amount column detected
+    }
+
+    transactions.push({
+      id: `tx-${++txCounter}`,
+      date,
+      description,
+      amount,
+      type,
+      category: type === 'credit' ? 'Income' : 'Other',
+      subcategory: '',
+      sourceFile,
+      rawRow: row,
+    })
+  }
+
+  return transactions
+}

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { RawTable } from './components/RawTable'
 import { readCsvFile } from './lib/readCsv'
+import { detectFormat, parseTransactions } from './lib/parser'
 import type { LoadedFile } from './lib/types'
 
 let fileCounter = 0
@@ -16,12 +17,19 @@ export function App() {
       const loaded = await Promise.all(
         newFiles.map(async (f): Promise<LoadedFile> => {
           const { headers, rows } = await readCsvFile(f)
+          let transactions: import('./lib/types').Transaction[] = []
+          try {
+            const mapping = detectFormat(headers, rows)
+            transactions = parseTransactions(f.name, rows, mapping)
+          } catch {
+            // format detection failed — show raw table, user can still see data
+          }
           return {
             id: `file-${++fileCounter}`,
             name: f.name,
             rawHeaders: headers,
             rawRows: rows,
-            transactions: [],
+            transactions,
           }
         }),
       )
