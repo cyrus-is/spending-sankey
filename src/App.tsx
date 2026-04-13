@@ -1,15 +1,36 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { RawTable } from './components/RawTable'
+import { ApiKeyEntry } from './components/ApiKeyEntry'
+import { getStoredApiKey, storeApiKey } from './lib/apiKey'
+import { TransactionTable } from './components/TransactionTable'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
-import type { LoadedFile } from './lib/types'
+import { categorizeTransactions } from './lib/categorize'
+import type { LoadedFile, Transaction } from './lib/types'
 
 let fileCounter = 0
+
+type AppState = 'idle' | 'categorizing' | 'done'
 
 export function App() {
   const [files, setFiles] = useState<LoadedFile[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey())
+  const [overrides, setOverrides] = useState<Record<string, string>>({})
+  const [appState, setAppState] = useState<AppState>('idle')
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+
+  // All transactions across all files
+  const allTransactions: Transaction[] = files.flatMap((f) => f.transactions)
+
+  // Check for categorized transactions (any with non-default category from Claude)
+  const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
+
+  const handleApiKey = useCallback((key: string) => {
+    setApiKey(key)
+    storeApiKey(key)
+  }, [])
 
   const handleFiles = useCallback(async (newFiles: File[]) => {
     setError(null)
@@ -17,12 +38,12 @@ export function App() {
       const loaded = await Promise.all(
         newFiles.map(async (f): Promise<LoadedFile> => {
           const { headers, rows } = await readCsvFile(f)
-          let transactions: import('./lib/types').Transaction[] = []
+          let transactions: Transaction[] = []
           try {
             const mapping = detectFormat(headers, rows)
             transactions = parseTransactions(f.name, rows, mapping)
           } catch {
-            // format detection failed — show raw table, user can still see data
+            // format detection failed — show raw table, will use Claude for detection
           }
           return {
             id: `file-${++fileCounter}`,
@@ -34,7 +55,6 @@ export function App() {
         }),
       )
       setFiles((prev) => {
-        // Deduplicate by filename
         const existingNames = new Set(prev.map((f) => f.name))
         const fresh = loaded.filter((f) => !existingNames.has(f.name))
         return [...prev, ...fresh]
@@ -48,16 +68,103 @@ export function App() {
     setFiles((prev) => prev.filter((f) => f.id !== id))
   }, [])
 
+  const handleOverride = useCallback((id: string, category: string) => {
+    setOverrides((prev) => ({ ...prev, [id]: category }))
+  }, [])
+
+  const handleCategorize = useCallback(async () => {
+    if (!apiKey || allTransactions.length === 0) return
+    setError(null)
+    setAppState('categorizing')
+    setProgress({ done: 0, total: allTransactions.length })
+
+    try {
+      const results = await categorizeTransactions(
+        allTransactions,
+        apiKey,
+        (done, total) => setProgress({ done, total }),
+      )
+
+      // Apply categories back to transactions in files
+      const resultMap = new Map(results.map((r) => [r.id, r]))
+
+      setFiles((prev) =>
+        prev.map((file) => ({
+          ...file,
+          transactions: file.transactions.map((tx) => {
+            const result = resultMap.get(tx.id)
+            if (!result) return tx
+            return { ...tx, category: result.category, subcategory: result.subcategory }
+          }),
+        })),
+      )
+      setAppState('done')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Categorization failed')
+      setAppState('idle')
+    } finally {
+      setProgress(null)
+    }
+  }, [apiKey, allTransactions])
+
+  // Reset to idle when files change
+  useEffect(() => {
+    if (appState === 'done') setAppState('idle')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files.length])
+
+  const showCategorizeBtn =
+    allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>Spending Sankey</h1>
         <p className="tagline">Drag-drop your bank CSVs, see where your money goes.</p>
       </header>
+
       <main className="app-main">
-        <DropZone onFiles={handleFiles} />
+        <ApiKeyEntry onKey={handleApiKey} hasKey={!!apiKey} />
+
+        <DropZone onFiles={handleFiles} disabled={appState === 'categorizing'} />
+
         {error && <div className="error-banner">{error}</div>}
-        <RawTable files={files} onRemove={handleRemove} />
+
+        {files.length > 0 && (
+          <div className="file-summary">
+            <span>{files.length} file{files.length !== 1 ? 's' : ''} loaded</span>
+            <span className="file-summary__sep">·</span>
+            <span>{allTransactions.length} transactions parsed</span>
+          </div>
+        )}
+
+        {showCategorizeBtn && (
+          <button className="categorize-btn" onClick={handleCategorize}>
+            Categorize with Claude ({allTransactions.length} transactions)
+          </button>
+        )}
+
+        {appState === 'categorizing' && progress && (
+          <div className="progress-bar-wrap">
+            <div
+              className="progress-bar"
+              style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+            />
+            <span className="progress-label">
+              Categorizing… {progress.done}/{progress.total}
+            </span>
+          </div>
+        )}
+
+        {hasCategorized ? (
+          <TransactionTable
+            transactions={allTransactions}
+            overrides={overrides}
+            onOverride={handleOverride}
+          />
+        ) : (
+          <RawTable files={files} onRemove={handleRemove} />
+        )}
       </main>
     </div>
   )

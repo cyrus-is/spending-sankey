@@ -194,3 +194,252 @@ body {
   border-radius: 6px;
   font-size: 0.875rem;
 }
+
+/* ApiKeyEntry */
+.api-key-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-key-form__label {
+  font-size: 0.875rem;
+  color: #a0aec0;
+}
+
+.api-key-form__hint {
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+.api-key-form__row {
+  display: flex;
+  gap: 8px;
+}
+
+.api-key-form__input {
+  flex: 1;
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #f7fafc;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.api-key-form__input:focus {
+  outline: none;
+  border-color: #63b3ed;
+}
+
+.api-key-form__toggle,
+.api-key-form__submit {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.api-key-form__submit {
+  background: #3182ce;
+  border-color: #3182ce;
+}
+
+.api-key-form__submit:hover {
+  background: #2b6cb0;
+}
+
+.api-key-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.api-key-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #68d391;
+  flex-shrink: 0;
+}
+
+.api-key-status__text {
+  color: #a0aec0;
+}
+
+.api-key-status__clear {
+  background: none;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  color: #a0aec0;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+
+/* File summary */
+.file-summary {
+  font-size: 0.875rem;
+  color: #a0aec0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.file-summary__sep {
+  color: #4a5568;
+}
+
+/* Categorize button */
+.categorize-btn {
+  background: #6b46c1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: flex-start;
+}
+
+.categorize-btn:hover {
+  background: #553c9a;
+}
+
+/* Progress bar */
+.progress-bar-wrap {
+  background: #2d3748;
+  border-radius: 6px;
+  height: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: #6b46c1;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+}
+
+/* Transaction table */
+.tx-table-wrap {
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tx-table-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #2d3748;
+}
+
+.tx-table-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f7fafc;
+}
+
+.tx-table-count {
+  color: #a0aec0;
+  font-size: 0.8rem;
+}
+
+.tx-table-scroll {
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.tx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  min-width: 700px;
+}
+
+.tx-table th {
+  background: #2d3748;
+  color: #a0aec0;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tx-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid #2d3748;
+  color: #cbd5e0;
+}
+
+.tx-table tbody tr:hover {
+  background: #2d3748;
+}
+
+.tx-date {
+  white-space: nowrap;
+  color: #718096;
+}
+
+.tx-desc {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-amount--debit {
+  color: #fc8181;
+}
+
+.tx-amount--credit {
+  color: #68d391;
+}
+
+.tx-category-select {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  color: #e2e8f0;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.tx-subcategory {
+  color: #718096;
+  font-size: 0.75rem;
+}
+
+.tx-source {
+  color: #718096;
+  font-size: 0.75rem;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
