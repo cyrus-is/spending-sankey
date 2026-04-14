@@ -37,6 +37,8 @@ const INCOME_COLOR = '#68d391'
 export function buildSankeyData(
   transactions: Transaction[],
   overrides: Record<string, string>,
+  /** Income sources below this fraction of total are merged into "Other Income". Default 0.02 (2%). */
+  mergeThreshold = 0.02,
 ): SankeyData {
   // Apply overrides
   const txns = transactions.map((tx) => ({
@@ -61,8 +63,8 @@ export function buildSankeyData(
     incomeBySource.set(source, (incomeBySource.get(source) ?? 0) + tx.amount)
   }
 
-  // Merge income sources < 5% of total into "Other Income"
-  const threshold = totalIncome * 0.05
+  // Merge income sources below mergeThreshold into "Other Income"
+  const threshold = totalIncome * mergeThreshold
   const mergedIncome = new Map<string, number>()
   let otherIncome = 0
   for (const [source, amount] of incomeBySource) {

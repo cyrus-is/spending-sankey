@@ -30,6 +30,7 @@ export function App() {
   const [appState, setAppState] = useState<AppState>('idle')
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
+  const [mergeThreshold, setMergeThreshold] = useState(0.02)
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files
@@ -193,9 +194,9 @@ export function App() {
     allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
 
   const sankeyData = useMemo(
-    () => (hasCategorized ? buildSankeyData(filteredTransactions, overrides) : null),
+    () => (hasCategorized ? buildSankeyData(filteredTransactions, overrides, mergeThreshold) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasCategorized, filteredTransactions.length, overrides, dateRange],
+    [hasCategorized, filteredTransactions.length, overrides, dateRange, mergeThreshold],
   )
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
@@ -299,7 +300,13 @@ export function App() {
             </p>
           </div>
         ) : (
-          sankeyData && <SankeyChart data={sankeyData} />
+          sankeyData && (
+            <SankeyChart
+              data={sankeyData}
+              mergeThreshold={mergeThreshold}
+              onMergeThresholdChange={setMergeThreshold}
+            />
+          )
         )}
 
         {hasCategorized ? (

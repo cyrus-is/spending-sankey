@@ -6,6 +6,9 @@ import type { SankeyData } from '../lib/sankey'
 
 interface SankeyChartProps {
   data: SankeyData
+  /** 0–1 fraction. Sources below this share of total income are merged into "Other Income". */
+  mergeThreshold: number
+  onMergeThresholdChange: (value: number) => void
 }
 
 // d3-sankey node/link types
@@ -24,7 +27,7 @@ const WIDTH = 900
 const HEIGHT = 500
 const MARGIN = { top: 10, right: 160, bottom: 10, left: 160 }
 
-export function SankeyChart({ data }: SankeyChartProps) {
+export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: SankeyChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
@@ -165,6 +168,21 @@ export function SankeyChart({ data }: SankeyChartProps) {
               maximumFractionDigits: 2,
             })}
           </span>
+        </div>
+        <div className="sankey-summary__item sankey-threshold">
+          <label htmlFor="merge-threshold" className="sankey-summary__label">
+            Merge sources &lt; {Math.round(mergeThreshold * 100)}%
+          </label>
+          <input
+            id="merge-threshold"
+            type="range"
+            min={0}
+            max={10}
+            step={1}
+            value={Math.round(mergeThreshold * 100)}
+            onChange={(e) => onMergeThresholdChange(parseInt(e.target.value) / 100)}
+            className="sankey-threshold__slider"
+          />
         </div>
       </div>
       <div className="sankey-svg-wrap">

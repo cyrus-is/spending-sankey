@@ -669,3 +669,15 @@ body {
   width: 100%;
   overflow-x: auto;
 }
+
+.sankey-threshold {
+  margin-left: auto;
+}
+
+.sankey-threshold__slider {
+  width: 120px;
+  accent-color: #6b46c1;
+  cursor: pointer;
+  display: block;
+  margin-top: 4px;
+}

@@ -50,7 +50,7 @@ function matchesAny(col: string, patterns: RegExp[]): boolean {
  * If ambiguous (all values ≤ 12), default to MM/DD (US).
  */
 export function detectDateOrder(dateStrings: string[]): 'mdy' | 'dmy' {
-  const SLASH_RE = /^(\d{1,2})[\/\-](\d{1,2})[\/\-]/
+  const SLASH_RE = /^(\d{1,2})[/-](\d{1,2})[/-]/
 
   for (const s of dateStrings) {
     const m = s.trim().match(SLASH_RE)
@@ -118,7 +118,7 @@ export function parseDate(raw: string, dateOrder: 'mdy' | 'dmy' = 'mdy'): Date {
   }
 
   // Slash dates: MM/DD/YYYY, DD/MM/YYYY, or MM/DD/YY — order determined by dateOrder
-  const slashMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/)
+  const slashMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/)
   if (slashMatch) {
     const a = parseInt(slashMatch[1])
     const b = parseInt(slashMatch[2])
