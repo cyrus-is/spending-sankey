@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectFormat, parseDate, parseTransactions } from './parser'
+import { detectFormat, detectDateOrder, parseDate, parseTransactions } from './parser'
 
 // ─── detectFormat ────────────────────────────────────────────────────────────
 
@@ -45,6 +45,46 @@ describe('detectFormat', () => {
     const headers = ['Date', 'Amount']
     expect(() => detectFormat(headers, [])).toThrow('description column')
   })
+
+  it('detects DMY order from sample rows with day > 12', () => {
+    const rows = [{ Date: '15/01/2024', Description: 'Test', Amount: '10' }]
+    const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
+    expect(mapping.dateOrder).toBe('dmy')
+  })
+
+  it('defaults to MDY order when all values ≤ 12 (ambiguous)', () => {
+    const rows = [{ Date: '01/02/2024', Description: 'Test', Amount: '10' }]
+    const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
+    expect(mapping.dateOrder).toBe('mdy')
+  })
+})
+
+// ─── detectDateOrder ─────────────────────────────────────────────────────────
+
+describe('detectDateOrder', () => {
+  it('detects DMY when first token > 12', () => {
+    expect(detectDateOrder(['15/01/2024', '20/02/2024'])).toBe('dmy')
+  })
+
+  it('detects MDY when second token > 12', () => {
+    expect(detectDateOrder(['01/15/2024', '02/20/2024'])).toBe('mdy')
+  })
+
+  it('defaults to MDY for ambiguous dates (all ≤ 12)', () => {
+    expect(detectDateOrder(['01/02/2024', '03/04/2024'])).toBe('mdy')
+  })
+
+  it('returns MDY for empty input', () => {
+    expect(detectDateOrder([])).toBe('mdy')
+  })
+
+  it('ignores ISO dates and returns MDY by default', () => {
+    expect(detectDateOrder(['2024-01-15', '2024-03-20'])).toBe('mdy')
+  })
+
+  it('detects DMY from a mixed set where one date has day > 12', () => {
+    expect(detectDateOrder(['01/02/2024', '25/03/2024'])).toBe('dmy')
+  })
 })
 
 // ─── parseDate ───────────────────────────────────────────────────────────────
@@ -57,7 +97,7 @@ describe('parseDate', () => {
     expect(d.getDate()).toBe(15)
   })
 
-  it('parses MM/DD/YYYY', () => {
+  it('parses MM/DD/YYYY (mdy default)', () => {
     const d = parseDate('03/15/2024')
     expect(d.getFullYear()).toBe(2024)
     expect(d.getMonth()).toBe(2)
@@ -67,6 +107,13 @@ describe('parseDate', () => {
   it('parses MM/DD/YY', () => {
     const d = parseDate('03/15/24')
     expect(d.getFullYear()).toBe(2024)
+  })
+
+  it('parses DD/MM/YYYY when dateOrder is dmy', () => {
+    const d = parseDate('15/03/2024', 'dmy')
+    expect(d.getFullYear()).toBe(2024)
+    expect(d.getMonth()).toBe(2) // March
+    expect(d.getDate()).toBe(15)
   })
 
   it('parses natural date string', () => {
@@ -96,7 +143,6 @@ describe('parseTransactions', () => {
     expect(txns[0].description).toBe('AMAZON.COM*2K7')
     expect(txns[0].amount).toBe(42.99)
     expect(txns[0].type).toBe('debit')
-    // Negative amount in Chase = credit (payment)
     expect(txns[1].type).toBe('credit')
     expect(txns[1].amount).toBe(3500)
   })
@@ -116,6 +162,18 @@ describe('parseTransactions', () => {
     expect(txns[0].amount).toBe(87.54)
     expect(txns[1].type).toBe('credit')
     expect(txns[1].amount).toBe(2500)
+  })
+
+  it('auto-detects DD/MM/YYYY and parses dates correctly', () => {
+    const rows = [
+      { Date: '15/01/2024', Description: 'Supermarket', Amount: '54.20' },
+      { Date: '20/01/2024', Description: 'Petrol', Amount: '30.00' },
+    ]
+    const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
+    expect(mapping.dateOrder).toBe('dmy')
+    const txns = parseTransactions('uk-bank.csv', rows, mapping)
+    expect(txns[0].date.getMonth()).toBe(0)  // January
+    expect(txns[0].date.getDate()).toBe(15)
   })
 
   it('skips rows with missing date or description', () => {

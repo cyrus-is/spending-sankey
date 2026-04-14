@@ -14,6 +14,8 @@ export interface ColumnMapping {
   type?: string
   /** If true, positive in `amount` means credit (income). Default: false (positive = debit) */
   positiveIsCredit?: boolean
+  /** Detected slash-date order for this file. 'dmy' = DD/MM/YYYY, 'mdy' = MM/DD/YYYY (default) */
+  dateOrder?: 'mdy' | 'dmy'
 }
 
 // Common column name patterns for each field
@@ -42,6 +44,26 @@ function matchesAny(col: string, patterns: RegExp[]): boolean {
   return patterns.some((p) => p.test(col))
 }
 
+/**
+ * Sniff the date order (MM/DD vs DD/MM) from a sample of date strings.
+ * If any first-token value is > 12, it must be a day → DD/MM order.
+ * If ambiguous (all values ≤ 12), default to MM/DD (US).
+ */
+export function detectDateOrder(dateStrings: string[]): 'mdy' | 'dmy' {
+  const SLASH_RE = /^(\d{1,2})[\/\-](\d{1,2})[\/\-]/
+
+  for (const s of dateStrings) {
+    const m = s.trim().match(SLASH_RE)
+    if (!m) continue
+    const first = parseInt(m[1])
+    const second = parseInt(m[2])
+    if (first > 12) return 'dmy'   // unambiguous: first token can only be a day
+    if (second > 12) return 'mdy'  // unambiguous: second token can only be a day
+  }
+
+  return 'mdy' // ambiguous — default to US format
+}
+
 /** Detect the column mapping from CSV headers and first few rows */
 export function detectFormat(
   headers: string[],
@@ -57,7 +79,6 @@ export function detectFormat(
   if (!descCol) throw new Error(`Could not detect description column. Headers: ${headers.join(', ')}`)
 
   // Determine if positive amount = credit (income) for single-column banks
-  // Detect by sampling: if most non-empty amounts are positive and we see "credit" in type col
   let positiveIsCredit = false
   if (amountCol) {
     const typeCol = headers.find((h) => /^type$/i.test(h) || /^transaction.?type$/i.test(h))
@@ -70,7 +91,11 @@ export function detectFormat(
     }
   }
 
-  const mapping: ColumnMapping = { date: dateCol, description: descCol }
+  // Detect slash-date order from the actual values in the file
+  const sampleDates = rows.slice(0, 30).map((r) => r[dateCol] ?? '').filter(Boolean)
+  const dateOrder = detectDateOrder(sampleDates)
+
+  const mapping: ColumnMapping = { date: dateCol, description: descCol, dateOrder }
   if (amountCol) {
     mapping.amount = amountCol
     mapping.positiveIsCredit = positiveIsCredit
@@ -81,8 +106,8 @@ export function detectFormat(
   return mapping
 }
 
-/** Parse a date string into a Date object, trying common formats */
-export function parseDate(raw: string): Date {
+/** Parse a date string into a Date object. dateOrder controls MM/DD vs DD/MM for slash dates. */
+export function parseDate(raw: string, dateOrder: 'mdy' | 'dmy' = 'mdy'): Date {
   const s = raw.trim()
 
   // ISO: 2024-01-15 — parse as local time (not UTC)
@@ -92,19 +117,17 @@ export function parseDate(raw: string): Date {
     if (!isNaN(d.getTime())) return d
   }
 
-  // MM/DD/YYYY or MM/DD/YY
-  const mdyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/)
-  if (mdyMatch) {
-    const [, mm, dd, yyyy] = mdyMatch
-    const year = yyyy.length === 2 ? parseInt(yyyy) + 2000 : parseInt(yyyy)
-    return new Date(year, parseInt(mm) - 1, parseInt(dd))
-  }
+  // Slash dates: MM/DD/YYYY, DD/MM/YYYY, or MM/DD/YY — order determined by dateOrder
+  const slashMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/)
+  if (slashMatch) {
+    const a = parseInt(slashMatch[1])
+    const b = parseInt(slashMatch[2])
+    const rawYear = slashMatch[3]
+    const year = rawYear.length === 2 ? parseInt(rawYear) + 2000 : parseInt(rawYear)
 
-  // DD/MM/YYYY
-  const dmyMatch = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/)
-  if (dmyMatch) {
-    const [, dd, mm, yyyy] = dmyMatch
-    return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd))
+    const mm = dateOrder === 'dmy' ? b : a
+    const dd = dateOrder === 'dmy' ? a : b
+    return new Date(year, mm - 1, dd)
   }
 
   // Month DD, YYYY: "Jan 15, 2024" or "January 15, 2024"
@@ -116,7 +139,6 @@ export function parseDate(raw: string): Date {
 
 /** Parse an amount string to a number. Returns the raw numeric value. */
 function parseAmount(raw: string): number {
-  // Remove currency symbols, spaces, commas; handle parentheses as negative
   let s = raw.trim()
   const negative = s.startsWith('(') && s.endsWith(')')
   s = s.replace(/[()$€£¥,\s]/g, '')
@@ -134,6 +156,7 @@ export function parseTransactions(
   mapping: ColumnMapping,
 ): Transaction[] {
   const transactions: Transaction[] = []
+  const dateOrder = mapping.dateOrder ?? 'mdy'
 
   for (const row of rows) {
     const rawDate = row[mapping.date] ?? ''
@@ -143,7 +166,7 @@ export function parseTransactions(
 
     let date: Date
     try {
-      date = parseDate(rawDate)
+      date = parseDate(rawDate, dateOrder)
     } catch {
       continue // skip unparseable rows
     }
@@ -154,11 +177,9 @@ export function parseTransactions(
     if (mapping.amount) {
       const raw = parseAmount(row[mapping.amount] ?? '0')
       if (mapping.positiveIsCredit) {
-        // positive = income
         amount = raw >= 0 ? raw : Math.abs(raw)
         type = raw >= 0 ? 'credit' : 'debit'
       } else {
-        // positive = expense (most banks)
         amount = Math.abs(raw)
         type = raw < 0 ? 'credit' : 'debit'
       }
@@ -173,10 +194,10 @@ export function parseTransactions(
         amount = Math.abs(creditRaw)
         type = 'credit'
       } else {
-        continue // no amount found, skip
+        continue
       }
     } else {
-      continue // no amount column detected
+      continue
     }
 
     transactions.push({
