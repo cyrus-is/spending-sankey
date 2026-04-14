@@ -7,10 +7,11 @@ import { TransactionTable } from './components/TransactionTable'
 import { DateFilter } from './components/DateFilter'
 import type { DateRange } from './components/DateFilter'
 import { LensSwitcher } from './components/LensSwitcher'
-import type { LensId, TaxResult } from './lib/lenses/types'
+import type { LensId, TaxResult, TaxArea } from './lib/lenses/types'
 import { ESSENTIALS_BUCKETS, TAX_AREAS } from './lib/lenses/types'
 import { mapToEssentialsBucket } from './lib/lenses/essentials'
 import { taxCategorize } from './lib/lenses/tax-us'
+import { TaxFlagPanel } from './components/TaxFlagPanel'
 import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
@@ -39,6 +40,7 @@ export function App() {
   const [activeLens, setActiveLens] = useState<LensId>('spending')
   const [taxResults, setTaxResults] = useState<TaxResult[] | null>(null)
   const [taxProgress, setTaxProgress] = useState<{ done: number; total: number } | null>(null)
+  const [taxOverrides, setTaxOverrides] = useState<Record<string, TaxArea>>({})
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files — memoized so downstream memos get a stable reference
@@ -235,6 +237,10 @@ export function App() {
   const showCategorizeBtn =
     allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
 
+  const handleTaxOverride = useCallback((id: string, taxArea: TaxArea) => {
+    setTaxOverrides((prev) => ({ ...prev, [id]: taxArea }))
+  }, [])
+
   // Essentials lens: remap each tx's spending category to a bucket name
   const essentialsOverrides = useMemo(() => {
     if (activeLens !== 'essentials') return {}
@@ -258,17 +264,22 @@ export function App() {
     [],
   )
 
-  // Tax overrides: map tx.id → taxArea (used as category by buildSankeyData)
-  const taxOverrides = useMemo(() => {
+  // Tax category map: tx.id → taxArea (API result + manual overrides)
+  const taxCategoryMap = useMemo(() => {
     if (activeLens !== 'tax-us' || !taxResults) return {}
     const resultMap = new Map(taxResults.map((r) => [r.id, r]))
     const result: Record<string, string> = {}
     for (const tx of filteredTransactions) {
-      const taxResult = resultMap.get(tx.id)
-      if (taxResult) result[tx.id] = taxResult.taxArea
+      // Manual override takes precedence over API result
+      if (taxOverrides[tx.id]) {
+        result[tx.id] = taxOverrides[tx.id]
+      } else {
+        const taxResult = resultMap.get(tx.id)
+        if (taxResult) result[tx.id] = taxResult.taxArea
+      }
     }
     return result
-  }, [activeLens, taxResults, filteredTransactions])
+  }, [activeLens, taxResults, taxOverrides, filteredTransactions])
 
   const sankeyData = useMemo(() => {
     if (!hasCategorized) return null
@@ -276,7 +287,7 @@ export function App() {
       return buildSankeyData(filteredTransactions, essentialsOverrides, mergeThreshold, essentialsColors)
     }
     if (activeLens === 'tax-us' && taxResults) {
-      const data = buildSankeyData(filteredTransactions, taxOverrides, mergeThreshold, taxColors)
+      const data = buildSankeyData(filteredTransactions, taxCategoryMap, mergeThreshold, taxColors)
       // Compute deductible vs non-deductible totals for the header
       const deductibleIds = new Set(['schedule-a', 'schedule-c', 'form-2441', 'hsa-medical'])
       let totalDeductible = 0
@@ -291,7 +302,7 @@ export function App() {
       return { ...data, totalDeductible, totalNonDeductible }
     }
     return buildSankeyData(filteredTransactions, overrides, mergeThreshold)
-  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, taxResults, taxOverrides, taxColors, mergeThreshold])
+  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, taxResults, taxCategoryMap, taxColors, mergeThreshold])
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
 
@@ -424,6 +435,15 @@ export function App() {
               onMergeThresholdChange={setMergeThreshold}
             />
           )
+        )}
+
+        {activeLens === 'tax-us' && taxResults && (
+          <TaxFlagPanel
+            transactions={filteredTransactions}
+            taxResults={taxResults}
+            taxOverrides={taxOverrides}
+            onOverride={handleTaxOverride}
+          />
         )}
 
         {hasCategorized ? (

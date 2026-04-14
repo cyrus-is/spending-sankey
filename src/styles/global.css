@@ -787,3 +787,118 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ── Tax Flag Panel ────────────────────────────────────────── */
+.tax-flag-panel {
+  background: #1a202c;
+  border: 1px solid #f6ad55;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.tax-flag-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.tax-flag-panel__title {
+  font-weight: 600;
+  color: #f6ad55;
+  font-size: 14px;
+}
+
+.tax-flag-panel__count {
+  font-size: 12px;
+  color: #a0aec0;
+  background: #2d3748;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.tax-flag-panel__hint {
+  font-size: 12px;
+  color: #718096;
+  margin-bottom: 12px;
+}
+
+.tax-flag-panel__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tax-flag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #2d3748;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.tax-flag-item__info {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tax-flag-item__desc {
+  font-size: 13px;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tax-flag-item__amount {
+  font-size: 12px;
+  color: #90cdf4;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-flag-item__select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tax-flag-item__select {
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  color: #e2e8f0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tax-flag-item__resolve {
+  background: #2f855a;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tax-flag-item__resolve:hover {
+  background: #276749;
+}
+
+/* ── Tax progress bar variant ──────────────────────────────── */
+.progress-bar--tax {
+  background: #d69e2e;
+}
