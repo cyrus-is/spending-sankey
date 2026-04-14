@@ -751,3 +751,39 @@ body {
   display: block;
   margin-top: 4px;
 }
+
+/* ── Lens switcher ─────────────────────────────────────────── */
+.lens-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.lens-switcher__btn {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #4a5568;
+  background: transparent;
+  color: #a0aec0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.lens-switcher__btn:hover:not(:disabled) {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-color: #718096;
+}
+
+.lens-switcher__btn--active {
+  background: #3182ce;
+  border-color: #3182ce;
+  color: #fff;
+  font-weight: 600;
+}
+
+.lens-switcher__btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

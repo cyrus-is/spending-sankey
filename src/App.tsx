@@ -6,13 +6,15 @@ import { SankeyChart } from './components/SankeyChart'
 import { TransactionTable } from './components/TransactionTable'
 import { DateFilter } from './components/DateFilter'
 import type { DateRange } from './components/DateFilter'
+import { LensSwitcher } from './components/LensSwitcher'
+import type { LensId } from './lib/lenses/types'
 import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
 import { categorizeTransactions } from './lib/categorize'
 import { buildSankeyData } from './lib/sankey'
 import { detectTransfers } from './lib/transfers'
-import type { LoadedFile, Transaction } from './lib/types'
+import type { LoadedFile } from './lib/types'
 
 let fileCounter = 0
 
@@ -31,6 +33,7 @@ export function App() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
   const [mergeThreshold, setMergeThreshold] = useState(0.02)
+  const [activeLens, setActiveLens] = useState<LensId>('spending')
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files — memoized so downstream memos get a stable reference
@@ -285,6 +288,14 @@ export function App() {
               Cancel
             </button>
           </div>
+        )}
+
+        {hasCategorized && (
+          <LensSwitcher
+            active={activeLens}
+            onChange={setActiveLens}
+            taxReady={hasCategorized}
+          />
         )}
 
         {hasCategorized && minDate && (
