@@ -7,10 +7,6 @@ describe('mapToEssentialsBucket', () => {
     expect(mapToEssentialsBucket('Housing')).toBe('fixed-essential')
   })
 
-  it('maps Subscriptions to fixed-essential', () => {
-    expect(mapToEssentialsBucket('Subscriptions')).toBe('fixed-essential')
-  })
-
   it('maps Health to fixed-essential', () => {
     expect(mapToEssentialsBucket('Health')).toBe('fixed-essential')
   })
@@ -23,12 +19,16 @@ describe('mapToEssentialsBucket', () => {
     expect(mapToEssentialsBucket('Transport')).toBe('variable-essential')
   })
 
-  it('maps Dining to discretionary', () => {
-    expect(mapToEssentialsBucket('Dining')).toBe('discretionary')
+  it('maps Subscriptions to easy-cut', () => {
+    expect(mapToEssentialsBucket('Subscriptions')).toBe('easy-cut')
   })
 
-  it('maps Entertainment to discretionary', () => {
-    expect(mapToEssentialsBucket('Entertainment')).toBe('discretionary')
+  it('maps Dining to easy-cut', () => {
+    expect(mapToEssentialsBucket('Dining')).toBe('easy-cut')
+  })
+
+  it('maps Entertainment to easy-cut', () => {
+    expect(mapToEssentialsBucket('Entertainment')).toBe('easy-cut')
   })
 
   it('maps Shopping to discretionary', () => {
@@ -44,7 +44,7 @@ describe('mapToEssentialsBucket', () => {
   })
 
   it('maps every known Category to exactly one bucket', () => {
-    const buckets = new Set(['fixed-essential', 'variable-essential', 'discretionary'])
+    const buckets = new Set(['fixed-essential', 'variable-essential', 'easy-cut', 'discretionary'])
     for (const cat of CATEGORIES) {
       expect(buckets).toContain(mapToEssentialsBucket(cat))
     }

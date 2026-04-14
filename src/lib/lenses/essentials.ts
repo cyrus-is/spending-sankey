@@ -2,13 +2,17 @@ import type { Category } from '../types'
 import type { EssentialsBucket } from './types'
 
 const BUCKET_MAP: Record<Category, EssentialsBucket> = {
+  // Hard to reduce — locked-in recurring costs
   Housing:       'fixed-essential',
-  Subscriptions: 'fixed-essential',
   Health:        'fixed-essential',
+  // Necessary but amount varies month to month
   Groceries:     'variable-essential',
   Transport:     'variable-essential',
-  Dining:        'discretionary',
-  Entertainment: 'discretionary',
+  // Recurring discretionary — easy to cancel or reduce
+  Subscriptions: 'easy-cut',
+  Dining:        'easy-cut',
+  Entertainment: 'easy-cut',
+  // One-off optional spending
   Shopping:      'discretionary',
   Travel:        'discretionary',
   Other:         'discretionary',

@@ -79,10 +79,11 @@ export interface TaxResult {
   ambiguous: boolean
 }
 
-export type EssentialsBucket = 'fixed-essential' | 'variable-essential' | 'discretionary'
+export type EssentialsBucket = 'fixed-essential' | 'variable-essential' | 'easy-cut' | 'discretionary'
 
 export const ESSENTIALS_BUCKETS: { id: EssentialsBucket; label: string; color: string }[] = [
   { id: 'fixed-essential',    label: 'Fixed Essential',    color: '#90cdf4' },
   { id: 'variable-essential', label: 'Variable Essential', color: '#68d391' },
-  { id: 'discretionary',      label: 'Discretionary',      color: '#f6ad55' },
+  { id: 'easy-cut',           label: 'Easy Cut',           color: '#f6ad55' },
+  { id: 'discretionary',      label: 'Discretionary',      color: '#b794f4' },
 ]
