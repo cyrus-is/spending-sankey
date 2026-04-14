@@ -39,7 +39,19 @@ const MARGIN = { top: 10, right: 160, bottom: 10, left: 160 }
 export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: SankeyChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+
+  // After tooltip renders, clamp its top so it never overflows the bottom of the wrap
+  useEffect(() => {
+    if (!tooltip || !tooltipRef.current || !wrapRef.current) return
+    const tipRect = tooltipRef.current.getBoundingClientRect()
+    const wrapRect = wrapRef.current.getBoundingClientRect()
+    const overflowBottom = (tooltip.y + tipRect.height) - wrapRect.height
+    if (overflowBottom > 0) {
+      setTooltip((prev) => prev && { ...prev, y: prev.y - overflowBottom - 4 })
+    }
+  }, [tooltip?.label, tooltip?.x, tooltip?.y])
 
   useEffect(() => {
     if (!svgRef.current || data.nodes.length === 0) return
@@ -235,6 +247,7 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
         />
         {tooltip && (
           <div
+            ref={tooltipRef}
             className="sankey-tooltip"
             style={{ left: tooltip.x, top: tooltip.y }}
           >
