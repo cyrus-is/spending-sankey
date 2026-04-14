@@ -931,3 +931,12 @@ body {
   font-size: 12px;
   color: #718096;
 }
+
+.lens-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  color: #a0aec0;
+  font-size: 14px;
+}

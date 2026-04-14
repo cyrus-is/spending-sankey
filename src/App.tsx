@@ -421,11 +421,26 @@ export function App() {
           />
         )}
 
+        {activeLens === 'tax-us' && appState === 'categorizing' && taxProgress && (
+          <div className="lens-loading-state">
+            <span className="loading-spinner" />
+            Analyzing {taxProgress.total} transactions for tax areas…
+          </div>
+        )}
+
+        {activeLens === 'tax-us' && !taxResults && appState !== 'categorizing' && hasCategorized && (
+          <div className="empty-state">
+            <p>Tax analysis failed. Check your API key and try again.</p>
+          </div>
+        )}
+
         {sankeyIsEmpty ? (
           <div className="empty-state">
-            <p>No income or expenses to display for this date range.</p>
+            <p>No {activeLens === 'tax-us' ? 'deductible expenses' : 'income or expenses'} to display for this date range.</p>
             <p className="empty-state__hint">
-              Try expanding the date range, or check that transfers aren't masking income/expenses.
+              {activeLens === 'tax-us'
+                ? 'Everything in this period was classified as Non-Deductible, or try expanding the date range.'
+                : 'Try expanding the date range, or check that transfers aren\'t masking income/expenses.'}
             </p>
           </div>
         ) : (

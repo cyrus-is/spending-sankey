@@ -14,7 +14,18 @@ Source: hq/projects/ideas/spending-sankey.md
 - [x] Transfer detection (keyword patterns + cross-file amount matching)
 - [x] CC autopay detection (AUTOPAY PAYMENT, PAYMENT THANK YOU)
 
+## v1.2 Features (lenses)
+- [x] Lens switcher infrastructure (pill toggle, lens state)
+- [x] Essentials lens (Fixed / Variable / Discretionary — no API call)
+- [x] Tax lens — Claude re-categorization into IRS schedule areas
+- [x] Tax lens — ambiguous transaction flagging (? badge + side panel)
+- [x] Tax lens — per-lens override isolation
+- [x] CPA export (CSV sorted by tax area)
+- [x] Extended sample data with tax-relevant transactions
+
 ## v2 Features (post-launch)
+- [ ] Gig economy lens (Uber/Lyft drivers, Airbnb hosts)
+- [ ] Business sub-tab within Tax lens (Schedule C personal/business toggle)
 - [ ] Recurring expense detection
 - [ ] Budget generation from actual spend
 - [ ] Budget vs actual overlay on Sankey
