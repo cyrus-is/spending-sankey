@@ -90,6 +90,7 @@ Examples:
 {"id":"tx5","taxArea":"schedule-c","ambiguous":true}`
 
 const BATCH_SIZE = 50
+const CONCURRENCY = 5
 
 function normalizeTaxArea(raw: string): TaxArea {
   if (VALID_TAX_AREAS.has(raw)) return raw as TaxArea
@@ -159,30 +160,38 @@ export async function taxCategorize(
 
   const total = transactions.length
   const allResults: TaxResult[] = []
+  let done = 0
 
+  // Split into batches
+  const batches: Transaction[][] = []
   for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+    batches.push(transactions.slice(i, i + BATCH_SIZE))
+  }
+
+  const runBatch = async (batch: Transaction[]): Promise<TaxResult[]> => {
     if (signal?.aborted) throw new Error('Tax categorization cancelled.')
-
-    const batch = transactions.slice(i, i + BATCH_SIZE)
-    const items = batch.map((tx) => ({
-      id: tx.id,
-      description: tx.description,
-      type: tx.type,
-    }))
+    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type }))
     const requestedIds = batch.map((tx) => tx.id)
-
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(items) }],
     })
-
     const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
-    const batchResults = parseBatchResponse(text, requestedIds)
-    allResults.push(...batchResults)
+    return parseBatchResponse(text, requestedIds)
+  }
 
-    onProgress?.(Math.min(i + batch.length, total), total)
+  // Run batches with bounded concurrency
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    if (signal?.aborted) throw new Error('Tax categorization cancelled.')
+    const group = batches.slice(i, i + CONCURRENCY)
+    const groupResults = await Promise.all(group.map(runBatch))
+    for (const batchResults of groupResults) {
+      allResults.push(...batchResults)
+      done += batchResults.length
+    }
+    onProgress?.(Math.min(done, total), total)
   }
 
   return allResults

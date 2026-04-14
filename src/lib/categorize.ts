@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Transaction } from './types'
 import { CATEGORIES } from './types'
+import { getCached, setCached } from './categorizationCache'
 
 interface CategorizationResult {
   id: string
@@ -50,6 +51,7 @@ Also provide a short subcategory (2-3 words). Examples:
 IMPORTANT: Respond ONLY with a valid JSON array. No markdown, no explanation, no code fences. Each element: {"id": "...", "category": "...", "subcategory": "..."}`
 
 const BATCH_SIZE = 50
+const CONCURRENCY = 5
 
 const VALID_CATEGORIES = new Set<string>(CATEGORIES)
 
@@ -187,6 +189,8 @@ export async function categorizeTransactions(
   apiKey: string,
   onProgress?: (done: number, total: number) => void,
   signal?: AbortSignal,
+  /** 'simple' | 'detailed' — used as cache key discriminator */
+  mode = 'simple',
 ): Promise<CategorizationResult[]> {
   const client = new Anthropic({
     apiKey,
@@ -194,34 +198,59 @@ export async function categorizeTransactions(
   })
 
   const total = transactions.length
-  // Collect all batch results before returning — caller applies atomically
   const allResults: CategorizationResult[] = []
+  let done = 0
 
-  for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
-    if (signal?.aborted) {
-      throw new Error('Categorization cancelled.')
+  // Resolve cache hits upfront — only send misses to Claude
+  const cacheMisses: Transaction[] = []
+  for (const tx of transactions) {
+    const cached = getCached(tx.description, tx.amount, tx.type, mode)
+    if (cached) {
+      allResults.push({ id: tx.id, ...cached })
+      done++
+    } else {
+      cacheMisses.push(tx)
     }
+  }
+  onProgress?.(done, total)
 
-    const batch = transactions.slice(i, i + BATCH_SIZE)
-    const items = batch.map((tx) => ({
-      id: tx.id,
-      description: tx.description,
-      type: tx.type,
-    }))
+  // Split misses into batches
+  const batches: Transaction[][] = []
+  for (let i = 0; i < cacheMisses.length; i += BATCH_SIZE) {
+    batches.push(cacheMisses.slice(i, i + BATCH_SIZE))
+  }
+
+  const runBatch = async (batch: Transaction[]): Promise<CategorizationResult[]> => {
+    if (signal?.aborted) throw new Error('Categorization cancelled.')
+    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type }))
     const requestedIds = batch.map((tx) => tx.id)
-
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(items) }],
     })
-
     const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
-    const batchResults = parseBatchResponse(text, requestedIds)
-    allResults.push(...batchResults)
+    const results = parseBatchResponse(text, requestedIds)
+    // Write results to cache
+    const txMap = new Map(batch.map((tx) => [tx.id, tx]))
+    for (const r of results) {
+      const tx = txMap.get(r.id)
+      if (tx) setCached(tx.description, tx.amount, tx.type, mode, { category: r.category, subcategory: r.subcategory })
+    }
+    return results
+  }
 
-    onProgress?.(Math.min(i + batch.length, total), total)
+  // Run batches with bounded concurrency
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    if (signal?.aborted) throw new Error('Categorization cancelled.')
+    const group = batches.slice(i, i + CONCURRENCY)
+    const groupResults = await Promise.all(group.map(runBatch))
+    for (const batchResults of groupResults) {
+      allResults.push(...batchResults)
+      done += batchResults.length
+    }
+    onProgress?.(Math.min(done, total), total)
   }
 
   return allResults

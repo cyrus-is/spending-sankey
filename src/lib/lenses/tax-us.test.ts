@@ -146,4 +146,23 @@ describe('taxCategorize', () => {
     await taxCategorize(txns, 'test-key')
     expect(mockCreate).toHaveBeenCalledTimes(2)
   })
+
+  it('fires concurrent API calls for multiple batches (CONCURRENCY=5)', async () => {
+    const mockCreate = await getMockCreate()
+    // 110 transactions → 3 batches; all 3 fire concurrently in one round
+    mockCreate.mockImplementation(({ messages }: { messages: Array<{ content: string }> }) => {
+      const items = JSON.parse(messages[0].content) as Array<{ id: string }>
+      return Promise.resolve({
+        content: [{ type: 'text', text: JSON.stringify(
+          items.map((item) => ({ id: item.id, taxArea: 'non-deductible', ambiguous: false })),
+        )}],
+      })
+    })
+
+    const txns = Array.from({ length: 110 }, (_, i) => makeTx({ id: `tx-${i}`, amount: i }))
+    const results = await taxCategorize(txns, 'test-key')
+
+    expect(mockCreate).toHaveBeenCalledTimes(3)
+    expect(results).toHaveLength(110)
+  })
 })

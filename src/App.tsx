@@ -153,15 +153,24 @@ export function App() {
   const handleCategorize = useCallback(async () => {
     if (!apiKey || allTransactions.length === 0) return
     setError(null)
+
+    // Only send transactions that haven't been categorized yet (subcategory is the
+    // definitive signal — Transfer-detected transactions keep subcategory '' but
+    // should be skipped too since their category is already set correctly).
+    const uncategorized = allTransactions.filter(
+      (tx) => tx.subcategory === '' && tx.category !== 'Transfer',
+    )
+    if (uncategorized.length === 0) return
+
     setAppState('categorizing')
-    setProgress({ done: 0, total: allTransactions.length })
+    setProgress({ done: 0, total: uncategorized.length })
 
     const controller = new AbortController()
     abortRef.current = controller
 
     try {
       const results = await categorizeTransactions(
-        allTransactions,
+        uncategorized,
         apiKey,
         (done, total) => setProgress({ done, total }),
         controller.signal,
@@ -235,8 +244,12 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files.length])
 
+  const uncategorizedCount = allTransactions.filter(
+    (tx) => tx.subcategory === '' && tx.category !== 'Transfer',
+  ).length
+
   const showCategorizeBtn =
-    allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
+    uncategorizedCount > 0 && apiKey && appState !== 'categorizing'
 
   const handleTaxOverride = useCallback((id: string, taxArea: TaxArea) => {
     setTaxOverrides((prev) => ({ ...prev, [id]: taxArea }))
@@ -366,13 +379,13 @@ export function App() {
               Categorize with Claude
             </button>
             <p className="categorize-hint">
-              Sends merchant names to Claude API to classify {allTransactions.length} transactions into spending categories.
+              Sends merchant names to Claude API to classify {uncategorizedCount} transaction{uncategorizedCount !== 1 ? 's' : ''} into spending categories.
               Amounts are never sent.
             </p>
           </div>
         )}
 
-        {!apiKey && allTransactions.length > 0 && !hasCategorized && (
+        {!apiKey && uncategorizedCount > 0 && (
           <div className="warn-banner">
             No API key set. Add your Claude API key above to categorize transactions and see the Sankey diagram.
           </div>
