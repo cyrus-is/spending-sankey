@@ -12,6 +12,7 @@ import { ESSENTIALS_BUCKETS, TAX_AREAS } from './lib/lenses/types'
 import { mapToEssentialsBucket } from './lib/lenses/essentials'
 import { taxCategorize } from './lib/lenses/tax-us'
 import { TaxFlagPanel } from './components/TaxFlagPanel'
+import { exportTaxCSV } from './lib/lenses/export'
 import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
@@ -438,12 +439,25 @@ export function App() {
         )}
 
         {activeLens === 'tax-us' && taxResults && (
-          <TaxFlagPanel
-            transactions={filteredTransactions}
-            taxResults={taxResults}
-            taxOverrides={taxOverrides}
-            onOverride={handleTaxOverride}
-          />
+          <>
+            <div className="tax-export-wrap">
+              <button
+                className="tax-export-btn"
+                onClick={() => exportTaxCSV(filteredTransactions, taxResults, taxOverrides)}
+              >
+                Export for CPA
+              </button>
+              <span className="tax-export-hint">
+                CSV sorted by tax area — share with your accountant
+              </span>
+            </div>
+            <TaxFlagPanel
+              transactions={filteredTransactions}
+              taxResults={taxResults}
+              taxOverrides={taxOverrides}
+              onOverride={handleTaxOverride}
+            />
+          </>
         )}
 
         {hasCategorized ? (
