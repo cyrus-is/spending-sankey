@@ -489,6 +489,8 @@ export function App() {
               data={sankeyData}
               mergeThreshold={mergeThreshold}
               onMergeThresholdChange={setMergeThreshold}
+              width={categorizationMode === 'detailed' && activeLens === 'spending' ? 1200 : undefined}
+              height={categorizationMode === 'detailed' && activeLens === 'spending' ? 560 : undefined}
             />
           )
         )}

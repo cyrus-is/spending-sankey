@@ -9,6 +9,10 @@ interface SankeyChartProps {
   /** 0–1 fraction. Sources below this share of total income are merged into "Other Income". */
   mergeThreshold: number
   onMergeThresholdChange: (value: number) => void
+  /** SVG width — defaults to 900. Pass 1200 for detailed (4-column) mode. */
+  width?: number
+  /** SVG height — defaults to 500. Pass 560 for detailed (4-column) mode. */
+  height?: number
 }
 
 // d3-sankey node/link types
@@ -32,11 +36,11 @@ interface D3Link extends SankeyLinkMinimal<D3Node, D3Link> {
   value: number
 }
 
-const WIDTH = 900
-const HEIGHT = 500
+const DEFAULT_WIDTH = 900
+const DEFAULT_HEIGHT = 500
 const MARGIN = { top: 10, right: 160, bottom: 10, left: 160 }
 
-export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: SankeyChartProps) {
+export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT }: SankeyChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -59,8 +63,8 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
-    const innerWidth = WIDTH - MARGIN.left - MARGIN.right
-    const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom
+    const innerWidth = width - MARGIN.left - MARGIN.right
+    const innerHeight = height - MARGIN.top - MARGIN.bottom
 
     const sankeyNodes: D3Node[] = data.nodes.map((n) => ({
       id: n.id,
@@ -171,7 +175,7 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
         })
         return `${d.label} ${val}`
       })
-  }, [data])
+  }, [data, width, height])
 
   if (data.nodes.length === 0) return null
 
@@ -240,9 +244,9 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
       <div className="sankey-svg-wrap" ref={wrapRef} style={{ position: 'relative' }}>
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          viewBox={`0 0 ${width} ${height}`}
           width="100%"
-          height={HEIGHT}
+          height={height}
           style={{ display: 'block' }}
         />
         {tooltip && (
