@@ -329,8 +329,8 @@ export function App() {
       }
       return { ...data, totalDeductible, totalNonDeductible }
     }
-    return buildSankeyData(filteredTransactions, overrides, mergeThreshold)
-  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, taxResults, taxCategoryMap, taxColors, mergeThreshold])
+    return buildSankeyData(filteredTransactions, overrides, mergeThreshold, {}, categorizationMode)
+  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, taxResults, taxCategoryMap, taxColors, mergeThreshold, categorizationMode])
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
 

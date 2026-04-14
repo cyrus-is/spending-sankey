@@ -54,6 +54,9 @@ export function buildSankeyData(
   mergeThreshold = 0.02,
   /** Extra node colors — merged with CATEGORY_COLORS. Use for lens-specific bucket colors. */
   extraNodeColors: Record<string, string> = {},
+  /** 'simple' = 3-column layout (income → spending → categories).
+   *  'detailed' = 4-column layout adding subcategory nodes on the right. */
+  mode: 'simple' | 'detailed' = 'simple',
 ): SankeyData {
   const nodeColors = { ...CATEGORY_COLORS, ...extraNodeColors }
 
@@ -157,30 +160,116 @@ export function buildSankeyData(
     })
   }
 
-  // Expense category nodes (right side); skip categories fully neutralized by refunds
-  for (const [category, amount] of expenseByCategory) {
-    if (amount <= 0) continue
-    const nodeId = `cat:${category}`
-    const vendorMap = vendorsByCategory.get(category)
-    const topVendors = vendorMap
-      ? [...vendorMap.entries()]
-          .filter(([, amt]) => amt > 0)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([name, amt]) => ({ name, amount: amt }))
-      : []
-    nodes.push({
-      id: nodeId,
-      label: category,
-      value: amount,
-      color: nodeColors[category] ?? '#a0aec0',
-      topVendors,
-    })
-    links.push({
-      source: 'spending',
-      target: nodeId,
-      value: amount,
-    })
+  if (mode === 'detailed') {
+    // ── Detailed mode: 4-column layout ─────────────────────────────────────────
+    // Group expense transactions by (category, subcategory) for sub: nodes.
+    // subcategory '' (unset) is treated as same as the category name itself.
+    const expenseBySubcategory = new Map<string, Map<string, number>>()
+    const vendorsBySubcategory = new Map<string, Map<string, number>>()
+
+    for (const tx of expenseTransactions) {
+      const sub = tx.subcategory || tx.category   // fallback: use category name
+      if (!expenseBySubcategory.has(tx.category)) expenseBySubcategory.set(tx.category, new Map())
+      const subMap = expenseBySubcategory.get(tx.category)!
+      subMap.set(sub, (subMap.get(sub) ?? 0) + tx.amount)
+
+      const subKey = `${tx.category}/${sub}`
+      if (!vendorsBySubcategory.has(subKey)) vendorsBySubcategory.set(subKey, new Map())
+      const vendorName = normalizeVendorName(tx.description)
+      const vendors = vendorsBySubcategory.get(subKey)!
+      vendors.set(vendorName, (vendors.get(vendorName) ?? 0) + tx.amount)
+    }
+
+    // Net refunds against their (category, subcategory) bucket
+    for (const tx of refundTransactions) {
+      const sub = tx.subcategory || tx.category
+      if (!expenseBySubcategory.has(tx.category)) expenseBySubcategory.set(tx.category, new Map())
+      const subMap = expenseBySubcategory.get(tx.category)!
+      subMap.set(sub, (subMap.get(sub) ?? 0) - tx.amount)
+
+      const subKey = `${tx.category}/${sub}`
+      if (!vendorsBySubcategory.has(subKey)) vendorsBySubcategory.set(subKey, new Map())
+      const vendorName = normalizeVendorName(tx.description)
+      const vendors = vendorsBySubcategory.get(subKey)!
+      vendors.set(vendorName, (vendors.get(vendorName) ?? 0) - tx.amount)
+    }
+
+    // Emit cat: + sub: nodes and links
+    for (const [category, amount] of expenseByCategory) {
+      if (amount <= 0) continue
+      const catNodeId = `cat:${category}`
+      nodes.push({
+        id: catNodeId,
+        label: category,
+        value: amount,
+        color: nodeColors[category] ?? '#a0aec0',
+        // topVendors on cat node aggregated across all subcategories
+        topVendors: (() => {
+          const vendorMap = vendorsByCategory.get(category)
+          return vendorMap
+            ? [...vendorMap.entries()]
+                .filter(([, amt]) => amt > 0)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([name, amt]) => ({ name, amount: amt }))
+            : []
+        })(),
+      })
+      links.push({ source: 'spending', target: catNodeId, value: amount })
+
+      // Subcategory nodes for this category
+      const subMap = expenseBySubcategory.get(category)
+      if (subMap) {
+        for (const [sub, subAmt] of subMap) {
+          if (subAmt <= 0) continue
+          const subNodeId = `sub:${category}/${sub}`
+          const subKey = `${category}/${sub}`
+          const vendorMap = vendorsBySubcategory.get(subKey)
+          const topVendors = vendorMap
+            ? [...vendorMap.entries()]
+                .filter(([, amt]) => amt > 0)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([name, amt]) => ({ name, amount: amt }))
+            : []
+          nodes.push({
+            id: subNodeId,
+            label: sub,
+            value: subAmt,
+            color: nodeColors[category] ?? '#a0aec0',
+            topVendors,
+          })
+          links.push({ source: catNodeId, target: subNodeId, value: subAmt })
+        }
+      }
+    }
+  } else {
+    // ── Simple mode: 3-column layout (existing logic) ───────────────────────────
+    // Expense category nodes (right side); skip categories fully neutralized by refunds
+    for (const [category, amount] of expenseByCategory) {
+      if (amount <= 0) continue
+      const nodeId = `cat:${category}`
+      const vendorMap = vendorsByCategory.get(category)
+      const topVendors = vendorMap
+        ? [...vendorMap.entries()]
+            .filter(([, amt]) => amt > 0)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, amt]) => ({ name, amount: amt }))
+        : []
+      nodes.push({
+        id: nodeId,
+        label: category,
+        value: amount,
+        color: nodeColors[category] ?? '#a0aec0',
+        topVendors,
+      })
+      links.push({
+        source: 'spending',
+        target: nodeId,
+        value: amount,
+      })
+    }
   }
 
   // If income > expenses, add "Savings" node
