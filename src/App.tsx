@@ -271,6 +271,9 @@ export function App() {
     const resultMap = new Map(taxResults.map((r) => [r.id, r]))
     const result: Record<string, string> = {}
     for (const tx of filteredTransactions) {
+      // Preserve Transfer category — buildSankeyData filters these out, same as spending mode
+      const spendingCategory = overrides[tx.id] ?? tx.category
+      if (spendingCategory === 'Transfer') continue
       // Manual override takes precedence over API result
       if (taxOverrides[tx.id]) {
         result[tx.id] = taxOverrides[tx.id]
