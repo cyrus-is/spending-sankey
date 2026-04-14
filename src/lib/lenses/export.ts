@@ -9,7 +9,8 @@ export function buildTaxCSV(
   taxOverrides: Record<string, TaxArea>,
 ): string {
   const resultMap = new Map(taxResults.map((r) => [r.id, r]))
-  const areaLabels = Object.fromEntries(TAX_AREAS.map((a) => [a.id, a.label]))
+  // CPA export uses IRS form references, not friendly UI labels
+  const areaLabels = Object.fromEntries(TAX_AREAS.map((a) => [a.id, a.irsRef]))
 
   const rows: string[][] = []
   rows.push(['Tax Area', 'Date', 'Vendor', 'Description', 'Amount'])

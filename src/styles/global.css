@@ -940,3 +940,79 @@ body {
   color: #a0aec0;
   font-size: 14px;
 }
+
+/* ── Tax category legend ───────────────────────────────────── */
+.tax-flag-panel__legend-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid #4a5568;
+  color: #a0aec0;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tax-flag-panel__legend-btn:hover,
+.tax-flag-panel__legend-btn--open {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-color: #718096;
+}
+
+.tax-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0 14px;
+  padding: 12px;
+  background: #0f1117;
+  border-radius: 6px;
+}
+
+@media (max-width: 640px) {
+  .tax-legend { grid-template-columns: 1fr; }
+}
+
+.tax-legend__item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.tax-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.tax-legend__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tax-legend__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.tax-legend__ref {
+  font-size: 11px;
+  color: #718096;
+}
+
+.tax-legend__desc {
+  font-size: 12px;
+  color: #a0aec0;
+  margin-top: 2px;
+}
+
+.tax-legend__examples {
+  font-size: 11px;
+  color: #718096;
+  font-style: italic;
+}
