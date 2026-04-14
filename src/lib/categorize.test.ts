@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { categorizeTransactions } from './categorize'
+import { categorizeTransactions, normalizeSubcategory, SUBCATEGORY_TAXONOMY } from './categorize'
 import { clearCache, setCached } from './categorizationCache'
 import type { Transaction } from './types'
 
@@ -190,5 +190,106 @@ describe('categorizeTransactions', () => {
     expect(mockCreate).toHaveBeenCalledTimes(2) // Both modes miss their respective caches
     expect(simpleResults[0].subcategory).toBe('Coffee')
     expect(detailedResults[0].subcategory).toBe('Coffee Shop')
+  })
+})
+
+describe('normalizeSubcategory', () => {
+  it('returns the subcategory unchanged when it is already in the taxonomy', () => {
+    expect(normalizeSubcategory('Dining', 'Coffee Shop')).toBe('Coffee Shop')
+    expect(normalizeSubcategory('Transport', 'Gas Station')).toBe('Gas Station')
+    expect(normalizeSubcategory('Subscriptions', 'Software/SaaS')).toBe('Software/SaaS')
+  })
+
+  it('matches case-insensitively', () => {
+    expect(normalizeSubcategory('Dining', 'coffee shop')).toBe('Coffee Shop')
+    expect(normalizeSubcategory('Health', 'PHARMACY')).toBe('Pharmacy')
+  })
+
+  it('falls back to the category name for unrecognized subcategories', () => {
+    expect(normalizeSubcategory('Dining', 'Sushi Bar')).toBe('Dining')
+    expect(normalizeSubcategory('Shopping', 'Hardware Store')).toBe('Shopping')
+  })
+
+  it('passes through subcategory unchanged for unknown categories', () => {
+    expect(normalizeSubcategory('UnknownCategory', 'Some Sub')).toBe('Some Sub')
+  })
+
+  it('all taxonomy entries are recognized by normalizeSubcategory', () => {
+    for (const [category, subcategories] of Object.entries(SUBCATEGORY_TAXONOMY)) {
+      for (const sub of subcategories) {
+        expect(normalizeSubcategory(category, sub)).toBe(sub)
+      }
+    }
+  })
+})
+
+describe('categorizeTransactions — detailed mode subcategory enforcement', () => {
+  beforeEach(async () => {
+    clearCache()
+    const mockCreate = await getMockCreate()
+    mockCreate.mockReset()
+  })
+
+  it('clamps out-of-taxonomy subcategory to category name in detailed mode', async () => {
+    const mockCreate = await getMockCreate()
+    mockCreate.mockResolvedValue(mockResponse([
+      { id: 'tx-1', category: 'Dining', subcategory: 'Sushi Place' }, // not in taxonomy
+    ]))
+
+    const txns = [makeTx({ id: 'tx-1', description: 'NOBU RESTAURANT', amount: 120 })]
+    const results = await categorizeTransactions(txns, 'test-key', undefined, undefined, 'detailed')
+    // Falls back to category name
+    expect(results[0].subcategory).toBe('Dining')
+  })
+
+  it('accepts a valid taxonomy subcategory in detailed mode', async () => {
+    const mockCreate = await getMockCreate()
+    mockCreate.mockResolvedValue(mockResponse([
+      { id: 'tx-1', category: 'Dining', subcategory: 'Restaurant' },
+    ]))
+
+    const txns = [makeTx({ id: 'tx-1', description: 'NOBU RESTAURANT', amount: 120 })]
+    const results = await categorizeTransactions(txns, 'test-key', undefined, undefined, 'detailed')
+    expect(results[0].subcategory).toBe('Restaurant')
+  })
+
+  it('does NOT clamp subcategory in simple mode (free-form allowed)', async () => {
+    const mockCreate = await getMockCreate()
+    mockCreate.mockResolvedValue(mockResponse([
+      { id: 'tx-1', category: 'Dining', subcategory: 'Sushi Place' }, // unusual but OK in simple
+    ]))
+
+    const txns = [makeTx({ id: 'tx-1', description: 'NOBU RESTAURANT', amount: 120 })]
+    const results = await categorizeTransactions(txns, 'test-key', undefined, undefined, 'simple')
+    expect(results[0].subcategory).toBe('Sushi Place')
+  })
+
+  it('uses DETAILED_SYSTEM_PROMPT (different system) for detailed mode API call', async () => {
+    const mockCreate = await getMockCreate()
+    mockCreate.mockResolvedValue(mockResponse([
+      { id: 'tx-1', category: 'Dining', subcategory: 'Restaurant' },
+    ]))
+
+    const txns = [makeTx({ id: 'tx-1', description: 'NOBU RESTAURANT', amount: 120 })]
+    await categorizeTransactions(txns, 'test-key', undefined, undefined, 'detailed')
+
+    const callArgs = mockCreate.mock.calls[0][0] as { system: string }
+    // Detailed prompt mentions the taxonomy table
+    expect(callArgs.system).toContain('Rent/Mortgage')
+    expect(callArgs.system).toContain('Software/SaaS')
+  })
+
+  it('simple mode uses the simple system prompt', async () => {
+    const mockCreate = await getMockCreate()
+    mockCreate.mockResolvedValue(mockResponse([
+      { id: 'tx-1', category: 'Dining', subcategory: 'Coffee Shop' },
+    ]))
+
+    const txns = [makeTx({ id: 'tx-1', description: 'STARBUCKS', amount: 5 })]
+    await categorizeTransactions(txns, 'test-key', undefined, undefined, 'simple')
+
+    const callArgs = mockCreate.mock.calls[0][0] as { system: string }
+    // Simple prompt should NOT contain the taxonomy table
+    expect(callArgs.system).not.toContain('Rent/Mortgage')
   })
 })
