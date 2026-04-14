@@ -1,10 +1,17 @@
 import type { Transaction } from './types'
 
+export interface VendorTotal {
+  name: string
+  amount: number
+}
+
 export interface SankeyNode {
   id: string
   label: string
   value: number
   color: string
+  /** Top vendors by spend — populated for expense category nodes only */
+  topVendors?: VendorTotal[]
 }
 
 export interface SankeyLink {
@@ -23,8 +30,10 @@ export interface SankeyData {
 const CATEGORY_COLORS: Record<string, string> = {
   Income: '#68d391',
   Housing: '#fc8181',
-  Food: '#f6ad55',
+  Groceries: '#f6ad55',
+  Dining: '#f9a74b',
   Transport: '#76e4f7',
+  Travel: '#4fd1c7',
   Shopping: '#b794f4',
   Entertainment: '#fbb6ce',
   Health: '#90cdf4',
@@ -76,10 +85,15 @@ export function buildSankeyData(
   }
   if (otherIncome > 0) mergedIncome.set('Other Income', otherIncome)
 
-  // Group expenses by category
+  // Group expenses by category, and track vendor totals within each category
   const expenseByCategory = new Map<string, number>()
+  const vendorsByCategory = new Map<string, Map<string, number>>()
   for (const tx of expenseTransactions) {
     expenseByCategory.set(tx.category, (expenseByCategory.get(tx.category) ?? 0) + tx.amount)
+    if (!vendorsByCategory.has(tx.category)) vendorsByCategory.set(tx.category, new Map())
+    const vendorName = normalizeVendorName(tx.description)
+    const vendors = vendorsByCategory.get(tx.category)!
+    vendors.set(vendorName, (vendors.get(vendorName) ?? 0) + tx.amount)
   }
 
   // Build nodes
@@ -113,11 +127,19 @@ export function buildSankeyData(
   // Expense category nodes (right side)
   for (const [category, amount] of expenseByCategory) {
     const nodeId = `cat:${category}`
+    const vendorMap = vendorsByCategory.get(category)
+    const topVendors = vendorMap
+      ? [...vendorMap.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name, amt]) => ({ name, amount: amt }))
+      : []
     nodes.push({
       id: nodeId,
       label: category,
       value: amount,
       color: CATEGORY_COLORS[category] ?? '#a0aec0',
+      topVendors,
     })
     links.push({
       source: 'spending',
@@ -143,6 +165,65 @@ export function buildSankeyData(
   }
 
   return { nodes, links, totalIncome, totalExpenses }
+}
+
+/** Normalize a vendor description to a clean, groupable name */
+function normalizeVendorName(description: string): string {
+  let s = description
+    .replace(/\*[A-Z0-9]+$/i, '')      // strip trailing order IDs like *8N3LQ7PK5
+    .replace(/#\d+/g, '')              // strip store numbers like #123
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+
+  // Well-known merchant normalizations
+  const MERCHANT_MAP: [RegExp, string][] = [
+    [/wholefds|whole\s*foods/i, 'Whole Foods'],
+    [/trader\s*joe/i, 'Trader Joe\'s'],
+    [/starbucks/i, 'Starbucks'],
+    [/amazon(?!\.com\s*refund)/i, 'Amazon'],
+    [/shell\s*oil|shell\s*service/i, 'Shell'],
+    [/costco\s*gas/i, 'Costco Gas'],
+    [/costco\s*whse|costco(?!\s*gas)/i, 'Costco'],
+    [/netflix/i, 'Netflix'],
+    [/spotify/i, 'Spotify'],
+    [/target/i, 'Target'],
+    [/cvs\s*pharmacy/i, 'CVS Pharmacy'],
+    [/walgreens/i, 'Walgreens'],
+    [/uber\s*eats/i, 'Uber Eats'],
+    [/uber\s*\*?\s*trip|uber\*?\s*pending/i, 'Uber'],
+    [/lyft/i, 'Lyft'],
+    [/grubhub/i, 'GrubHub'],
+    [/doordash/i, 'DoorDash'],
+    [/instacart/i, 'Instacart'],
+    [/chipotle/i, 'Chipotle'],
+    [/sweetgreen/i, 'Sweetgreen'],
+    [/equinox/i, 'Equinox'],
+    [/planet\s*fitness/i, 'Planet Fitness'],
+    [/delta\s*air/i, 'Delta Air Lines'],
+    [/marriott/i, 'Marriott'],
+    [/hilton/i, 'Hilton'],
+    [/airbnb/i, 'Airbnb'],
+    [/apple\s*store/i, 'Apple Store'],
+    [/apple\.com/i, 'Apple.com'],
+    [/at&t|att\*/i, 'AT&T'],
+    [/pg&e/i, 'PG&E'],
+    [/comcast/i, 'Comcast'],
+    [/tesco/i, 'Tesco'],
+    [/sainsbury/i, 'Sainsbury\'s'],
+    [/deliveroo/i, 'Deliveroo'],
+    [/pret\s*a\s*manger/i, 'Pret A Manger'],
+    [/costa\s*coffee/i, 'Costa Coffee'],
+    [/notion/i, 'Notion'],
+    [/zoom/i, 'Zoom'],
+    [/anthropic/i, 'Anthropic API'],
+  ]
+
+  for (const [pattern, name] of MERCHANT_MAP) {
+    if (pattern.test(s)) return name
+  }
+
+  // Trim long descriptions
+  return s.length > 28 ? s.substring(0, 28) + '…' : s
 }
 
 /** Normalize income source description to a clean label */

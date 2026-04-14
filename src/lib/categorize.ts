@@ -10,29 +10,105 @@ interface CategorizationResult {
 
 const SYSTEM_PROMPT = `You are a personal finance categorization assistant. Your job is to categorize bank transactions.
 
-For each transaction, assign exactly one of these categories:
-- Income: salary, payroll, direct deposits, interest, dividends, refunds
-- Housing: rent, mortgage, utilities, internet, insurance (home/renter's)
-- Food: groceries, restaurants, coffee shops, food delivery
-- Transport: gas stations, parking, rideshare, public transit, car insurance, auto payments
-- Shopping: retail stores, Amazon, clothing, electronics, online shopping
-- Entertainment: streaming services (unless subscription), games, movies, concerts, sports
-- Health: pharmacy, doctors, dentists, gym, health insurance
-- Subscriptions: recurring monthly/annual services (Netflix, Spotify, Adobe, etc.)
-- Transfer: transfers between accounts, payments to credit cards, Zelle, Venmo (person-to-person)
-- Other: anything that doesn't fit
+For each transaction, assign EXACTLY one of these category strings (use the exact spelling):
+- Income
+- Housing
+- Groceries
+- Dining
+- Transport
+- Travel
+- Shopping
+- Entertainment
+- Health
+- Subscriptions
+- Transfer
+- Other
 
-Also provide a short subcategory (1-3 words) for more specificity. Examples:
-- Food / Groceries
-- Transport / Gas
-- Subscriptions / Streaming
-- Income / Payroll
+Category rules:
+- Income: salary, payroll, direct deposits, interest earned, tax refunds, side job payments, freelance deposits
+- Housing: rent, mortgage, utilities (electric, gas, water), internet/cable, renters/home insurance, phone bill (AT&T, Comcast)
+- Groceries: supermarkets and warehouse stores for food (Whole Foods, Trader Joe's, Costco, Sainsbury's, Tesco, M&S Food, Instacart delivery)
+- Dining: restaurants, coffee shops (Starbucks, Blue Bottle, Costa, Pret A Manger), food delivery apps (DoorDash, GrubHub, Uber Eats, Deliveroo), fast food (Chipotle, McDonald's), Sweetgreen
+- Transport: gas stations (Shell, Costco Gas), parking, rideshare trips (Uber trip, Lyft), public transit (Oyster/TfL), auto insurance, car payments
+- Travel: flights (Delta, American, United), hotels (Marriott, Hilton, Hyatt), Airbnb, vacation rentals
+- Shopping: Amazon, Target, retail stores, clothing, electronics (Apple Store, Best Buy), general online retail
+- Entertainment: bars, concerts, movies, events, Total Wine, alcohol
+- Health: CVS, Walgreens, pharmacies, doctors, dentists, gym memberships (Equinox, Planet Fitness)
+- Subscriptions: Netflix, Spotify, Hulu, Apple.com/bill, Adobe, Zoom, Notion, ANTHROPIC *API, recurring SaaS
+- Transfer: Zelle, Venmo, account-to-account transfers, savings transfers. Do NOT use Transfer for credit card autopay — those are flagged separately.
+- Other: truly unrecognizable merchants only. When in doubt, pick the most likely category above.
 
-Respond ONLY with a JSON array, no other text. Each element: {"id": "...", "category": "...", "subcategory": "..."}`
+Also provide a short subcategory (2-3 words). Examples:
+{"id":"tx1","category":"Groceries","subcategory":"Supermarket"}
+{"id":"tx2","category":"Dining","subcategory":"Food Delivery"}
+{"id":"tx3","category":"Transport","subcategory":"Gas Station"}
+{"id":"tx4","category":"Travel","subcategory":"Hotel"}
+{"id":"tx5","category":"Subscriptions","subcategory":"Streaming"}
+{"id":"tx6","category":"Income","subcategory":"Payroll"}
+{"id":"tx7","category":"Housing","subcategory":"Rent"}
+
+IMPORTANT: Respond ONLY with a valid JSON array. No markdown, no explanation, no code fences. Each element: {"id": "...", "category": "...", "subcategory": "..."}`
 
 const BATCH_SIZE = 50
 
 const VALID_CATEGORIES = new Set<string>(CATEGORIES)
+
+/** Map fuzzy/variant category names Claude sometimes returns to our canonical set */
+const CATEGORY_ALIASES: Record<string, string> = {
+  // Groceries
+  grocery: 'Groceries', supermarket: 'Groceries', 'grocery store': 'Groceries',
+  'warehouse grocery': 'Groceries', 'grocery delivery': 'Groceries',
+  food: 'Groceries',  // generic "Food" → Groceries as the safer default
+  'food & drink': 'Groceries', 'food and drink': 'Groceries',
+  // Dining
+  dining: 'Dining', restaurant: 'Dining', restaurants: 'Dining',
+  'dining out': 'Dining', 'eating out': 'Dining',
+  'coffee shop': 'Dining', 'coffee shops': 'Dining', coffee: 'Dining',
+  'food delivery': 'Dining', takeout: 'Dining', takeaway: 'Dining',
+  'fast food': 'Dining',
+  // Transport
+  gas: 'Transport', transportation: 'Transport', transit: 'Transport',
+  rideshare: 'Transport', 'car insurance': 'Transport', parking: 'Transport',
+  fuel: 'Transport', 'public transit': 'Transport',
+  // Travel
+  travel: 'Travel', hotel: 'Travel', hotels: 'Travel',
+  airline: 'Travel', airlines: 'Travel', flight: 'Travel', flights: 'Travel',
+  accommodation: 'Travel', lodging: 'Travel', vacation: 'Travel',
+  // Shopping
+  retail: 'Shopping', 'online shopping': 'Shopping', clothing: 'Shopping',
+  electronics: 'Shopping', merchandise: 'Shopping', 'online retail': 'Shopping',
+  // Entertainment
+  entertainment: 'Entertainment', games: 'Entertainment', gaming: 'Entertainment',
+  movies: 'Entertainment', concerts: 'Entertainment', sports: 'Entertainment',
+  streaming: 'Entertainment', alcohol: 'Entertainment',
+  // Health
+  medical: 'Health', healthcare: 'Health', pharmacy: 'Health',
+  fitness: 'Health', gym: 'Health', dental: 'Health',
+  // Subscriptions
+  subscription: 'Subscriptions', subscriptions: 'Subscriptions',
+  'streaming services': 'Subscriptions', 'recurring services': 'Subscriptions',
+  'ai api service': 'Subscriptions', saas: 'Subscriptions',
+  // Housing
+  housing: 'Housing', rent: 'Housing', mortgage: 'Housing',
+  utilities: 'Housing', utility: 'Housing', insurance: 'Housing',
+  'phone bill': 'Housing', 'utility bill': 'Housing', 'electric bill': 'Housing',
+  // Income
+  income: 'Income', salary: 'Income', payroll: 'Income',
+  wages: 'Income', deposit: 'Income', 'side job': 'Income',
+  // Transfer
+  transfer: 'Transfer', transfers: 'Transfer',
+  // Other
+  miscellaneous: 'Other', misc: 'Other',
+}
+
+function normalizeCategory(raw: string): string {
+  if (VALID_CATEGORIES.has(raw)) return raw
+  const lower = raw.toLowerCase().trim()
+  if (VALID_CATEGORIES.has(lower.charAt(0).toUpperCase() + lower.slice(1))) {
+    return lower.charAt(0).toUpperCase() + lower.slice(1)
+  }
+  return CATEGORY_ALIASES[lower] ?? 'Other'
+}
 
 /** Parse and validate a batch response from Claude. Throws with a descriptive message on any issue. */
 function parseBatchResponse(text: string, requestedIds: string[]): CategorizationResult[] {
@@ -40,9 +116,16 @@ function parseBatchResponse(text: string, requestedIds: string[]): Categorizatio
     throw new Error('Claude returned an empty response for a categorization batch.')
   }
 
+  // DEBUG: log raw response for first batch to diagnose categorization issues
+  if (requestedIds[0]) {
+    console.debug('[categorize] raw response (first 500 chars):', text.substring(0, 500))
+  }
+
   let parsed: unknown
   try {
-    parsed = JSON.parse(text)
+    // Strip markdown code fences if Claude wrapped the JSON (e.g. ```json ... ```)
+    const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+    parsed = JSON.parse(stripped)
   } catch {
     throw new Error(
       `Claude returned non-JSON for a categorization batch. Raw response: ${text.substring(0, 200)}`,
@@ -67,8 +150,9 @@ function parseBatchResponse(text: string, requestedIds: string[]): Categorizatio
     if (typeof obj['id'] !== 'string' || !obj['id']) {
       throw new Error(`Batch item missing string 'id': ${JSON.stringify(item)}`)
     }
-    if (typeof obj['category'] !== 'string' || !VALID_CATEGORIES.has(obj['category'])) {
-      // Use 'Other' rather than crashing on unknown category — Claude may hallucinate new ones
+    if (typeof obj['category'] === 'string') {
+      obj['category'] = normalizeCategory(obj['category'])
+    } else {
       obj['category'] = 'Other'
     }
     if (typeof obj['subcategory'] !== 'string') {
@@ -82,6 +166,11 @@ function parseBatchResponse(text: string, requestedIds: string[]): Categorizatio
       subcategory: obj['subcategory'] as string,
     })
   }
+
+  // DEBUG: log category distribution for this batch
+  const dist: Record<string, number> = {}
+  for (const r of results) dist[r.category] = (dist[r.category] ?? 0) + 1
+  console.debug('[categorize] batch category distribution:', dist)
 
   // Warn about missing IDs — fill them in as 'Other' so no transaction is silently dropped
   for (const id of requestedIds) {
@@ -122,7 +211,7 @@ export async function categorizeTransactions(
     const requestedIds = batch.map((tx) => tx.id)
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(items) }],

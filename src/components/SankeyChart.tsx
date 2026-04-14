@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey'
 import type { SankeyNodeMinimal, SankeyLinkMinimal } from 'd3-sankey'
-import type { SankeyData } from '../lib/sankey'
+import type { SankeyData, VendorTotal } from '../lib/sankey'
 
 interface SankeyChartProps {
   data: SankeyData
@@ -17,6 +17,15 @@ interface D3Node extends SankeyNodeMinimal<D3Node, D3Link> {
   label: string
   color: string
   value: number
+  topVendors?: VendorTotal[]
+}
+
+interface TooltipState {
+  x: number
+  y: number
+  label: string
+  total: number
+  vendors: VendorTotal[]
 }
 
 interface D3Link extends SankeyLinkMinimal<D3Node, D3Link> {
@@ -29,6 +38,8 @@ const MARGIN = { top: 10, right: 160, bottom: 10, left: 160 }
 
 export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: SankeyChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null)
 
   useEffect(() => {
     if (!svgRef.current || data.nodes.length === 0) return
@@ -39,19 +50,18 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
     const innerWidth = WIDTH - MARGIN.left - MARGIN.right
     const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom
 
-    // Build id-to-index map
-    const nodeIndexMap = new Map(data.nodes.map((n, i) => [n.id, i]))
-
     const sankeyNodes: D3Node[] = data.nodes.map((n) => ({
       id: n.id,
       label: n.label,
       color: n.color,
       value: n.value,
+      topVendors: n.topVendors,
     }))
 
+    // Links reference nodes by string ID (nodeId accessor below must match)
     const sankeyLinks: D3Link[] = data.links.map((l) => ({
-      source: nodeIndexMap.get(l.source) ?? 0,
-      target: nodeIndexMap.get(l.target) ?? 0,
+      source: l.source as unknown as D3Node,
+      target: l.target as unknown as D3Node,
       value: l.value,
     }))
 
@@ -115,11 +125,21 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
       .attr('height', (d) => Math.max(1, (d.y1 ?? 0) - (d.y0 ?? 0)))
       .attr('fill', (d) => d.color)
       .attr('rx', 2)
-      .append('title')
-      .text(
-        (d) =>
-          `${d.label}\n$${(d.value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      )
+      .style('cursor', (d) => (d.topVendors && d.topVendors.length > 0 ? 'pointer' : 'default'))
+      .on('mousemove', function (event: MouseEvent, d: D3Node) {
+        if (!d.topVendors || d.topVendors.length === 0) return
+        const wrap = wrapRef.current
+        if (!wrap) return
+        const rect = wrap.getBoundingClientRect()
+        setTooltip({
+          x: event.clientX - rect.left + 12,
+          y: event.clientY - rect.top - 8,
+          label: d.label,
+          total: d.value ?? 0,
+          vendors: d.topVendors,
+        })
+      })
+      .on('mouseleave', () => setTooltip(null))
 
     // Node labels
     nodeGroup
@@ -185,7 +205,7 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
           />
         </div>
       </div>
-      <div className="sankey-svg-wrap">
+      <div className="sankey-svg-wrap" ref={wrapRef} style={{ position: 'relative' }}>
         <svg
           ref={svgRef}
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -193,6 +213,29 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
           height={HEIGHT}
           style={{ display: 'block' }}
         />
+        {tooltip && (
+          <div
+            className="sankey-tooltip"
+            style={{ left: tooltip.x, top: tooltip.y }}
+          >
+            <div className="sankey-tooltip__header">
+              <span className="sankey-tooltip__label">{tooltip.label}</span>
+              <span className="sankey-tooltip__total">
+                ${tooltip.total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </span>
+            </div>
+            <ol className="sankey-tooltip__vendors">
+              {tooltip.vendors.map((v) => (
+                <li key={v.name} className="sankey-tooltip__vendor-row">
+                  <span className="sankey-tooltip__vendor-name">{v.name}</span>
+                  <span className="sankey-tooltip__vendor-amount">
+                    ${v.amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
     </div>
   )

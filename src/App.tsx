@@ -33,8 +33,12 @@ export function App() {
   const [mergeThreshold, setMergeThreshold] = useState(0.02)
   const abortRef = useRef<AbortController | null>(null)
 
-  // All transactions across all files
-  const allTransactions: Transaction[] = files.flatMap((f) => f.transactions)
+  // All transactions across all files — memoized so downstream memos get a stable reference
+  // that updates whenever files (or their transaction categories) change
+  const allTransactions = useMemo(
+    () => files.flatMap((f) => f.transactions),
+    [files],
+  )
 
   // Date bounds
   const { minDate, maxDate } = useMemo(() => {
@@ -61,8 +65,7 @@ export function App() {
     return allTransactions.filter(
       (tx) => tx.date.getTime() >= start && tx.date.getTime() <= end,
     )
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTransactions.length, overrides, dateRange])
+  }, [allTransactions, overrides, dateRange])
 
   // Check for categorized transactions (any with non-default category from Claude)
   const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
@@ -160,6 +163,8 @@ export function App() {
         prev.map((file) => ({
           ...file,
           transactions: file.transactions.map((tx) => {
+            // Never overwrite transfer-detection results — those are authoritative
+            if (tx.category === 'Transfer') return tx
             const result = resultMap.get(tx.id)
             if (!result) return tx
             return { ...tx, category: result.category, subcategory: result.subcategory }
@@ -195,8 +200,7 @@ export function App() {
 
   const sankeyData = useMemo(
     () => (hasCategorized ? buildSankeyData(filteredTransactions, overrides, mergeThreshold) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasCategorized, filteredTransactions.length, overrides, dateRange, mergeThreshold],
+    [hasCategorized, filteredTransactions, overrides, dateRange, mergeThreshold],
   )
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1

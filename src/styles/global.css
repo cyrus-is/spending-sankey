@@ -616,6 +616,12 @@ body {
   border-color: #3182ce;
 }
 
+.date-filter__btn--active {
+  background: #2b6cb0;
+  color: white;
+  border-color: #3182ce;
+}
+
 /* SankeyChart */
 .sankey-wrap {
   background: #1a202c;
@@ -668,6 +674,70 @@ body {
 .sankey-svg-wrap {
   width: 100%;
   overflow-x: auto;
+}
+
+.sankey-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 200px;
+  max-width: 260px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.sankey-tooltip__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #4a5568;
+}
+
+.sankey-tooltip__label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.sankey-tooltip__total {
+  font-size: 13px;
+  color: #a0aec0;
+}
+
+.sankey-tooltip__vendors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sankey-tooltip__vendor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.sankey-tooltip__vendor-name {
+  color: #cbd5e0;
+  flex: 1;
+  margin-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sankey-tooltip__vendor-amount {
+  color: #90cdf4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .sankey-threshold {

@@ -4,11 +4,11 @@ Test CSVs covering the main parsing edge cases. Drop any of these into the app t
 
 | File | Bank | Date format | Amount format | Notes |
 |------|------|-------------|---------------|-------|
-| `chase-checking.csv` | Chase Checking | MM/DD/YYYY | Single `Amount` column, negative = credit | Includes payroll, transfers, refund |
-| `bofa-credit-card.csv` | BofA Credit Card | MM/DD/YYYY | Single `Amount`, positive = charge, negative = payment/refund | Extra columns (`Reference Number`, `Address`) before description |
-| `credit-union-checking.csv` | Generic Credit Union | YYYY-MM-DD (ISO) | Separate `Debit` / `Credit` columns | Includes interest income, side job deposit |
-| `amex-gold.csv` | American Express | MM/DD/YYYY | `(NNN.NN)` parenthetical = charge, positive = payment | Extra columns (`Card Member`, `Account #`) — tests column skip |
-| `monzo-uk.csv` | Monzo (UK) | DD/MM/YYYY | Separate `Paid out` / `Paid in` columns | Tests DD/MM auto-detection; many extra columns; GBP |
+| `chase-checking.csv` | Chase Checking | MM/DD/YYYY | Single `Amount` column, negative = credit | Full year Jan–Dec 2024; rent, payroll, transfers, year-end bonus |
+| `bofa-credit-card.csv` | BofA Credit Card | MM/DD/YYYY | Single `Amount`, positive = charge, negative = payment/refund | Full year Jan–Dec 2024; extra columns (`Reference Number`, `Address`) |
+| `credit-union-checking.csv` | Generic Credit Union | YYYY-MM-DD (ISO) | Separate `Debit` / `Credit` columns | Full year Jan–Dec 2024; interest income, side job deposits |
+| `amex-gold.csv` | American Express | MM/DD/YYYY | `(NNN.NN)` parenthetical = charge, positive = payment | Full year Jan–Dec 2024; travel, dining, refunds; extra columns |
+| `monzo-uk.csv` | Monzo (UK) | DD/MM/YYYY | Separate `Paid out` / `Paid in` columns | Full year Jan–Dec 2024; DD/MM auto-detection; GBP; 196 transactions |
 
 ## What each file exercises
 
