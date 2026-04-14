@@ -123,7 +123,8 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
       .attr('y', (d) => d.y0 ?? 0)
       .attr('width', (d) => (d.x1 ?? 0) - (d.x0 ?? 0))
       .attr('height', (d) => Math.max(1, (d.y1 ?? 0) - (d.y0 ?? 0)))
-      .attr('fill', (d) => d.color)
+      .attr('fill', (d) => d.id === 'cat:non-deductible' ? '#4a5568' : d.color)
+      .attr('opacity', (d) => d.id === 'cat:non-deductible' ? 0.5 : 1)
       .attr('rx', 2)
       .style('cursor', (d) => (d.topVendors && d.topVendors.length > 0 ? 'pointer' : 'default'))
       .on('mousemove', function (event: MouseEvent, d: D3Node) {
@@ -165,30 +166,49 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange }: Sa
   return (
     <div className="sankey-wrap">
       <div className="sankey-summary">
-        <div className="sankey-summary__item sankey-summary__item--income">
-          <span className="sankey-summary__label">Total Income</span>
-          <span className="sankey-summary__value">
-            ${data.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div className="sankey-summary__item sankey-summary__item--expense">
-          <span className="sankey-summary__label">Total Expenses</span>
-          <span className="sankey-summary__value">
-            ${data.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div
-          className={`sankey-summary__item ${data.totalIncome >= data.totalExpenses ? 'sankey-summary__item--positive' : 'sankey-summary__item--negative'}`}
-        >
-          <span className="sankey-summary__label">Net</span>
-          <span className="sankey-summary__value">
-            {data.totalIncome >= data.totalExpenses ? '+' : '-'}$
-            {Math.abs(data.totalIncome - data.totalExpenses).toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-        </div>
+        {data.totalDeductible !== undefined ? (
+          <>
+            <div className="sankey-summary__item sankey-summary__item--income">
+              <span className="sankey-summary__label">Total Deductible</span>
+              <span className="sankey-summary__value">
+                ${data.totalDeductible.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="sankey-summary__item sankey-summary__item--expense">
+              <span className="sankey-summary__label">Non-Deductible</span>
+              <span className="sankey-summary__value">
+                ${(data.totalNonDeductible ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="sankey-summary__item sankey-summary__item--income">
+              <span className="sankey-summary__label">Total Income</span>
+              <span className="sankey-summary__value">
+                ${data.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="sankey-summary__item sankey-summary__item--expense">
+              <span className="sankey-summary__label">Total Expenses</span>
+              <span className="sankey-summary__value">
+                ${data.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div
+              className={`sankey-summary__item ${data.totalIncome >= data.totalExpenses ? 'sankey-summary__item--positive' : 'sankey-summary__item--negative'}`}
+            >
+              <span className="sankey-summary__label">Net</span>
+              <span className="sankey-summary__value">
+                {data.totalIncome >= data.totalExpenses ? '+' : '-'}$
+                {Math.abs(data.totalIncome - data.totalExpenses).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          </>
+        )}
         <div className="sankey-summary__item sankey-threshold">
           <label htmlFor="merge-threshold" className="sankey-summary__label">
             Merge sources &lt; {Math.round(mergeThreshold * 100)}%

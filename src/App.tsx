@@ -7,9 +7,10 @@ import { TransactionTable } from './components/TransactionTable'
 import { DateFilter } from './components/DateFilter'
 import type { DateRange } from './components/DateFilter'
 import { LensSwitcher } from './components/LensSwitcher'
-import type { LensId } from './lib/lenses/types'
-import { ESSENTIALS_BUCKETS } from './lib/lenses/types'
+import type { LensId, TaxResult } from './lib/lenses/types'
+import { ESSENTIALS_BUCKETS, TAX_AREAS } from './lib/lenses/types'
 import { mapToEssentialsBucket } from './lib/lenses/essentials'
+import { taxCategorize } from './lib/lenses/tax-us'
 import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
@@ -36,6 +37,8 @@ export function App() {
   const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
   const [mergeThreshold, setMergeThreshold] = useState(0.02)
   const [activeLens, setActiveLens] = useState<LensId>('spending')
+  const [taxResults, setTaxResults] = useState<TaxResult[] | null>(null)
+  const [taxProgress, setTaxProgress] = useState<{ done: number; total: number } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files — memoized so downstream memos get a stable reference
@@ -194,6 +197,35 @@ export function App() {
     abortRef.current?.abort()
   }, [])
 
+  const handleLensChange = useCallback(async (lens: LensId) => {
+    setActiveLens(lens)
+    if (lens === 'tax-us' && !taxResults && apiKey && allTransactions.length > 0) {
+      setError(null)
+      setAppState('categorizing')
+      setTaxProgress({ done: 0, total: allTransactions.length })
+      const controller = new AbortController()
+      abortRef.current = controller
+      try {
+        const results = await taxCategorize(
+          allTransactions,
+          apiKey,
+          (done, total) => setTaxProgress({ done, total }),
+          controller.signal,
+        )
+        setTaxResults(results)
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : 'Tax categorization failed')
+        }
+        setActiveLens('spending')
+      } finally {
+        setTaxProgress(null)
+        setAppState('done')
+        abortRef.current = null
+      }
+    }
+  }, [taxResults, apiKey, allTransactions])
+
   // Reset to idle when files change
   useEffect(() => {
     if (appState === 'done') setAppState('idle')
@@ -220,13 +252,46 @@ export function App() {
     [],
   )
 
+  // Tax area → color map
+  const taxColors = useMemo(
+    () => Object.fromEntries(TAX_AREAS.map((a) => [a.id, a.color])),
+    [],
+  )
+
+  // Tax overrides: map tx.id → taxArea (used as category by buildSankeyData)
+  const taxOverrides = useMemo(() => {
+    if (activeLens !== 'tax-us' || !taxResults) return {}
+    const resultMap = new Map(taxResults.map((r) => [r.id, r]))
+    const result: Record<string, string> = {}
+    for (const tx of filteredTransactions) {
+      const taxResult = resultMap.get(tx.id)
+      if (taxResult) result[tx.id] = taxResult.taxArea
+    }
+    return result
+  }, [activeLens, taxResults, filteredTransactions])
+
   const sankeyData = useMemo(() => {
     if (!hasCategorized) return null
     if (activeLens === 'essentials') {
       return buildSankeyData(filteredTransactions, essentialsOverrides, mergeThreshold, essentialsColors)
     }
+    if (activeLens === 'tax-us' && taxResults) {
+      const data = buildSankeyData(filteredTransactions, taxOverrides, mergeThreshold, taxColors)
+      // Compute deductible vs non-deductible totals for the header
+      const deductibleIds = new Set(['schedule-a', 'schedule-c', 'form-2441', 'hsa-medical'])
+      let totalDeductible = 0
+      let totalNonDeductible = 0
+      for (const node of data.nodes) {
+        if (node.id.startsWith('cat:')) {
+          const area = node.id.slice(4)
+          if (deductibleIds.has(area)) totalDeductible += node.value
+          else if (area === 'non-deductible') totalNonDeductible += node.value
+        }
+      }
+      return { ...data, totalDeductible, totalNonDeductible }
+    }
     return buildSankeyData(filteredTransactions, overrides, mergeThreshold)
-  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, mergeThreshold])
+  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, taxResults, taxOverrides, taxColors, mergeThreshold])
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
 
@@ -312,10 +377,25 @@ export function App() {
           </div>
         )}
 
+        {appState === 'categorizing' && taxProgress && (
+          <div className="progress-bar-wrap">
+            <div
+              className="progress-bar progress-bar--tax"
+              style={{ width: `${Math.round((taxProgress.done / taxProgress.total) * 100)}%` }}
+            />
+            <span className="progress-label">
+              Tax analysis… {taxProgress.done}/{taxProgress.total}
+            </span>
+            <button className="progress-cancel" onClick={handleCancel} aria-label="Cancel tax categorization">
+              Cancel
+            </button>
+          </div>
+        )}
+
         {hasCategorized && (
           <LensSwitcher
             active={activeLens}
-            onChange={setActiveLens}
+            onChange={handleLensChange}
             taxReady={hasCategorized}
           />
         )}

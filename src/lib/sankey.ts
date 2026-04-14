@@ -25,6 +25,10 @@ export interface SankeyData {
   links: SankeyLink[]
   totalIncome: number
   totalExpenses: number
+  /** Set when rendering a Tax lens — sum of deductible nodes (Schedule A, C, 2441, HSA) */
+  totalDeductible?: number
+  /** Set when rendering a Tax lens — sum of Non-Deductible node */
+  totalNonDeductible?: number
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
