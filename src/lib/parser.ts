@@ -33,11 +33,11 @@ const AMOUNT_PATTERNS = [
 ]
 const DEBIT_PATTERNS = [
   /^debit$/i, /^withdrawal$/i, /^debit.?amount$/i, /^withdrawals?$/i,
-  /^money.?out$/i, /^payment$/i,
+  /^money.?out$/i, /^payment$/i, /paid\s*out/i,
 ]
 const CREDIT_PATTERNS = [
   /^credit$/i, /^deposit$/i, /^credit.?amount$/i, /^deposits?$/i,
-  /^money.?in$/i,
+  /^money.?in$/i, /paid\s*in/i,
 ]
 
 function matchesAny(col: string, patterns: RegExp[]): boolean {
@@ -78,7 +78,11 @@ export function detectFormat(
   if (!dateCol) throw new Error(`Could not detect date column. Headers: ${headers.join(', ')}`)
   if (!descCol) throw new Error(`Could not detect description column. Headers: ${headers.join(', ')}`)
 
-  // Determine if positive amount = credit (income) for single-column banks
+  // Determine if positive amount = credit (income) for single-column banks.
+  // Two signals, either one is sufficient:
+  //   1. A Type column contains "credit" for rows with positive amounts (explicit)
+  //   2. Majority of non-zero amounts are negative — indicates the Amex/credit-card
+  //      convention where (NNN) or -NNN = charge, positive = payment.
   let positiveIsCredit = false
   if (amountCol) {
     const typeCol = headers.find((h) => /^type$/i.test(h) || /^transaction.?type$/i.test(h))
@@ -89,6 +93,23 @@ export function detectFormat(
       )
       if (creditRows.length > 0) positiveIsCredit = true
     }
+
+    if (!positiveIsCredit) {
+      // Count sign of amounts in a broader sample to detect Amex-style convention
+      const sample = rows.slice(0, 40)
+      let negCount = 0
+      let posCount = 0
+      for (const r of sample) {
+        const raw = (r[amountCol] ?? '').trim()
+        if (!raw) continue
+        const isNeg = raw.startsWith('(') || raw.startsWith('-')
+        if (isNeg) negCount++
+        else posCount++
+      }
+      // If clearly majority-negative (with a minimum sample to avoid false positives),
+      // positive = credit (income). Require at least 5 non-zero amounts before deciding.
+      if (negCount + posCount >= 5 && negCount > posCount * 2) positiveIsCredit = true
+    }
   }
 
   // Detect slash-date order from the actual values in the file
@@ -96,12 +117,15 @@ export function detectFormat(
   const dateOrder = detectDateOrder(sampleDates)
 
   const mapping: ColumnMapping = { date: dateCol, description: descCol, dateOrder }
-  if (amountCol) {
+  // Prefer explicit debit/credit split over a single signed amount column —
+  // the split is unambiguous and avoids sign-convention guessing.
+  if (debitCol || creditCol) {
+    if (debitCol) mapping.debit = debitCol
+    if (creditCol) mapping.credit = creditCol
+  } else if (amountCol) {
     mapping.amount = amountCol
     mapping.positiveIsCredit = positiveIsCredit
   }
-  if (debitCol) mapping.debit = debitCol
-  if (creditCol) mapping.credit = creditCol
 
   return mapping
 }

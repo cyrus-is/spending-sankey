@@ -1,0 +1,30 @@
+Transaction ID,Date,Time,Type,Name,Emoji,Category,Amount,Currency,Local amount,Local currency,Notes and #tags,Address,Description,Reference,Paid out (GBP),Paid in (GBP),Balance (GBP)
+tx_0001,15/01/2024,08:32:10,Payment,Tesco Express,🛒,Groceries,-12.45,GBP,12.45,GBP,,,Tesco Express,,-12.45,,1842.33
+tx_0002,15/01/2024,12:15:44,Payment,Pret A Manger,☕,Eating out,-6.80,GBP,6.80,GBP,,,Pret A Manger,,-6.80,,1835.53
+tx_0003,16/01/2024,09:00:00,Faster payment,EMPLOYER SALARY,,Income,2800.00,GBP,2800.00,GBP,Monthly salary,,,Salary,,2800.00,4635.53
+tx_0004,16/01/2024,19:44:22,Payment,Deliveroo,🍕,Eating out,-22.90,GBP,22.90,GBP,,,Deliveroo,,-22.90,,4612.63
+tx_0005,18/01/2024,14:20:11,Payment,Amazon,📦,Shopping,-34.99,GBP,34.99,GBP,,,Amazon,,-34.99,,4577.64
+tx_0006,19/01/2024,08:10:55,Payment,Oyster / TfL,🚇,Transport,-34.10,GBP,34.10,GBP,Weekly travel card,,,,-34.10,,4543.54
+tx_0007,20/01/2024,11:30:00,Payment,Sainsbury's,🛒,Groceries,-45.32,GBP,45.32,GBP,,,Sainsbury's,,-45.32,,4498.22
+tx_0008,21/01/2024,20:15:33,Payment,Netflix,📺,Entertainment,-10.99,GBP,10.99,GBP,,,Netflix,,-10.99,,4487.23
+tx_0009,22/01/2024,07:45:20,Payment,Costa Coffee,☕,Eating out,-4.50,GBP,4.50,GBP,,,Costa Coffee,,-4.50,,4482.73
+tx_0010,23/01/2024,18:22:10,Payment,Shell,⛽,Transport,-58.40,GBP,58.40,GBP,,,Shell Petrol,,-58.40,,4424.33
+tx_0011,24/01/2024,10:05:44,Payment,Gym Membership,,Health,-40.00,GBP,40.00,GBP,Monthly direct debit,,,,-40.00,,4384.33
+tx_0012,25/01/2024,15:30:22,Payment,M&S Food,,Groceries,-28.75,GBP,28.75,GBP,,,Marks & Spencer,,-28.75,,4355.58
+tx_0013,26/01/2024,09:00:00,Payment,Monzo Flex,,Transfers,-250.00,GBP,250.00,GBP,,,,,,-250.00,,4105.58
+tx_0014,28/01/2024,12:40:15,Payment,Tesco Express,,Groceries,-14.90,GBP,14.90,GBP,,,Tesco Express,,-14.90,,4090.68
+tx_0015,29/01/2024,19:55:00,Payment,Spotify,🎵,Entertainment,-9.99,GBP,9.99,GBP,,,Spotify,,-9.99,,4080.69
+tx_0016,01/02/2024,14:20:11,Payment,Amazon,,Shopping,-67.50,GBP,67.50,GBP,,,Amazon,,-67.50,,4013.19
+tx_0017,02/02/2024,09:30:00,Payment,Oyster / TfL,,Transport,-34.10,GBP,34.10,GBP,Weekly travel card,,,,-34.10,,3979.09
+tx_0018,03/02/2024,11:15:44,Payment,Sainsbury's,,Groceries,-52.18,GBP,52.18,GBP,,,Sainsbury's,,-52.18,,3926.91
+tx_0019,04/02/2024,20:00:10,Payment,Deliveroo,,Eating out,-19.50,GBP,19.50,GBP,,,Deliveroo,,-19.50,,3907.41
+tx_0020,05/02/2024,09:00:00,Faster payment,EMPLOYER SALARY,,Income,2800.00,GBP,2800.00,GBP,Monthly salary,,,Salary,,2800.00,6707.41
+tx_0021,06/02/2024,08:25:33,Payment,Costa Coffee,,Eating out,-4.75,GBP,4.75,GBP,,,Costa Coffee,,-4.75,,6702.66
+tx_0022,08/02/2024,19:30:15,Payment,Netflix,,Entertainment,-10.99,GBP,10.99,GBP,,,Netflix,,-10.99,,6691.67
+tx_0023,10/02/2024,15:10:22,Payment,M&S Food,,Groceries,-31.40,GBP,31.40,GBP,,,Marks & Spencer,,-31.40,,6660.27
+tx_0024,12/02/2024,11:00:00,Payment,Gym Membership,,Health,-40.00,GBP,40.00,GBP,Monthly direct debit,,,,-40.00,,6620.27
+tx_0025,14/02/2024,19:45:00,Payment,Restaurant 1847,,Eating out,-88.00,GBP,88.00,GBP,Valentine's,,,,-88.00,,6532.27
+tx_0026,16/02/2024,09:00:00,Payment,Oyster / TfL,,Transport,-34.10,GBP,34.10,GBP,Weekly travel card,,,,-34.10,,6498.17
+tx_0027,18/02/2024,14:30:11,Payment,Tesco,,Groceries,-61.22,GBP,61.22,GBP,,,Tesco,,-61.22,,6436.95
+tx_0028,20/02/2024,10:15:44,Payment,Spotify,,Entertainment,-9.99,GBP,9.99,GBP,,,Spotify,,-9.99,,6426.96
+tx_0029,22/02/2024,16:40:22,Payment,Amazon,,Shopping,-22.00,GBP,22.00,GBP,,,Amazon,,-22.00,,6404.96
