@@ -58,14 +58,25 @@ export function buildSankeyData(
   // Filter out transfers
   const nonTransfer = txns.filter((tx) => tx.category !== 'Transfer')
 
-  // Separate income and expenses
-  const incomeTransactions = nonTransfer.filter((tx) => tx.type === 'credit')
+  // Categories that, when assigned to a credit transaction, signal a refund/return
+  // rather than true income. Claude assigns these when it recognises the merchant.
+  const EXPENSE_CATEGORIES = new Set([
+    'Groceries', 'Dining', 'Housing', 'Transport', 'Travel',
+    'Shopping', 'Entertainment', 'Health', 'Subscriptions',
+  ])
+
+  // Separate income and expenses; credits with an expense category are refunds
+  const refundTransactions = nonTransfer.filter(
+    (tx) => tx.type === 'credit' && EXPENSE_CATEGORIES.has(tx.category),
+  )
+  const incomeTransactions = nonTransfer.filter(
+    (tx) => tx.type === 'credit' && !EXPENSE_CATEGORIES.has(tx.category),
+  )
   const expenseTransactions = nonTransfer.filter((tx) => tx.type === 'debit')
 
   const totalIncome = incomeTransactions.reduce((s, tx) => s + tx.amount, 0)
-  const totalExpenses = expenseTransactions.reduce((s, tx) => s + tx.amount, 0)
 
-  // Group income by description (source), merge small ones into "Other Income"
+  // Group income by source label, merging small ones into "Other Income"
   const incomeBySource = new Map<string, number>()
   for (const tx of incomeTransactions) {
     const source = normalizeSource(tx.description)
@@ -96,6 +107,20 @@ export function buildSankeyData(
     vendors.set(vendorName, (vendors.get(vendorName) ?? 0) + tx.amount)
   }
 
+  // Net refunds against their expense category (and vendor totals)
+  for (const tx of refundTransactions) {
+    const cat = tx.category
+    expenseByCategory.set(cat, (expenseByCategory.get(cat) ?? 0) - tx.amount)
+    if (!vendorsByCategory.has(cat)) vendorsByCategory.set(cat, new Map())
+    const vendorName = normalizeVendorName(tx.description)
+    const vendors = vendorsByCategory.get(cat)!
+    vendors.set(vendorName, (vendors.get(vendorName) ?? 0) - tx.amount)
+  }
+
+  const totalExpenses = [...expenseByCategory.values()]
+    .filter((v) => v > 0)
+    .reduce((s, v) => s + v, 0)
+
   // Build nodes
   const nodes: SankeyNode[] = []
   const links: SankeyLink[] = []
@@ -124,12 +149,14 @@ export function buildSankeyData(
     })
   }
 
-  // Expense category nodes (right side)
+  // Expense category nodes (right side); skip categories fully neutralized by refunds
   for (const [category, amount] of expenseByCategory) {
+    if (amount <= 0) continue
     const nodeId = `cat:${category}`
     const vendorMap = vendorsByCategory.get(category)
     const topVendors = vendorMap
       ? [...vendorMap.entries()]
+          .filter(([, amt]) => amt > 0)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 5)
           .map(([name, amt]) => ({ name, amount: amt }))
