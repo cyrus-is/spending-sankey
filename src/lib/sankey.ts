@@ -48,7 +48,11 @@ export function buildSankeyData(
   overrides: Record<string, string>,
   /** Income sources below this fraction of total are merged into "Other Income". Default 0.02 (2%). */
   mergeThreshold = 0.02,
+  /** Extra node colors — merged with CATEGORY_COLORS. Use for lens-specific bucket colors. */
+  extraNodeColors: Record<string, string> = {},
 ): SankeyData {
+  const nodeColors = { ...CATEGORY_COLORS, ...extraNodeColors }
+
   // Apply overrides
   const txns = transactions.map((tx) => ({
     ...tx,
@@ -165,7 +169,7 @@ export function buildSankeyData(
       id: nodeId,
       label: category,
       value: amount,
-      color: CATEGORY_COLORS[category] ?? '#a0aec0',
+      color: nodeColors[category] ?? '#a0aec0',
       topVendors,
     })
     links.push({

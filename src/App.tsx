@@ -8,6 +8,8 @@ import { DateFilter } from './components/DateFilter'
 import type { DateRange } from './components/DateFilter'
 import { LensSwitcher } from './components/LensSwitcher'
 import type { LensId } from './lib/lenses/types'
+import { ESSENTIALS_BUCKETS } from './lib/lenses/types'
+import { mapToEssentialsBucket } from './lib/lenses/essentials'
 import { getStoredApiKey, storeApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
@@ -201,10 +203,30 @@ export function App() {
   const showCategorizeBtn =
     allTransactions.length > 0 && apiKey && !hasCategorized && appState !== 'categorizing'
 
-  const sankeyData = useMemo(
-    () => (hasCategorized ? buildSankeyData(filteredTransactions, overrides, mergeThreshold) : null),
-    [hasCategorized, filteredTransactions, overrides, dateRange, mergeThreshold],
+  // Essentials lens: remap each tx's spending category to a bucket name
+  const essentialsOverrides = useMemo(() => {
+    if (activeLens !== 'essentials') return {}
+    const result: Record<string, string> = {}
+    for (const tx of filteredTransactions) {
+      const spendingCategory = overrides[tx.id] ?? tx.category
+      result[tx.id] = mapToEssentialsBucket(spendingCategory)
+    }
+    return result
+  }, [activeLens, filteredTransactions, overrides])
+
+  // Essentials bucket → color map (passed as extraNodeColors)
+  const essentialsColors = useMemo(
+    () => Object.fromEntries(ESSENTIALS_BUCKETS.map((b) => [b.id, b.color])),
+    [],
   )
+
+  const sankeyData = useMemo(() => {
+    if (!hasCategorized) return null
+    if (activeLens === 'essentials') {
+      return buildSankeyData(filteredTransactions, essentialsOverrides, mergeThreshold, essentialsColors)
+    }
+    return buildSankeyData(filteredTransactions, overrides, mergeThreshold)
+  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, mergeThreshold])
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
 
