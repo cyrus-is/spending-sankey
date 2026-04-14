@@ -7,6 +7,8 @@ import { TransactionTable } from './components/TransactionTable'
 import { DateFilter } from './components/DateFilter'
 import type { DateRange } from './components/DateFilter'
 import { LensSwitcher } from './components/LensSwitcher'
+import { CategorizationModeSelector } from './components/CategorizationModeSelector'
+import type { CategorizationMode } from './components/CategorizationModeSelector'
 import type { LensId, TaxResult, TaxArea } from './lib/lenses/types'
 import { ESSENTIALS_BUCKETS, TAX_AREAS } from './lib/lenses/types'
 import { mapToEssentialsBucket } from './lib/lenses/essentials'
@@ -42,6 +44,9 @@ export function App() {
   const [taxResults, setTaxResults] = useState<TaxResult[] | null>(null)
   const [taxProgress, setTaxProgress] = useState<{ done: number; total: number } | null>(null)
   const [taxOverrides, setTaxOverrides] = useState<Record<string, TaxArea>>({})
+  const [categorizationMode, setCategorizationMode] = useState<CategorizationMode>('simple')
+  /** The mode that was used for the last successful categorization run */
+  const [lastCategorizedMode, setLastCategorizedMode] = useState<CategorizationMode | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files — memoized so downstream memos get a stable reference
@@ -154,11 +159,12 @@ export function App() {
     if (!apiKey || allTransactions.length === 0) return
     setError(null)
 
-    // Only send transactions that haven't been categorized yet (subcategory is the
-    // definitive signal — Transfer-detected transactions keep subcategory '' but
-    // should be skipped too since their category is already set correctly).
+    // If mode changed after a previous categorization, re-run all non-Transfer transactions
+    // so subcategories are regenerated for the new taxonomy. Otherwise, only send
+    // transactions that haven't been categorized yet.
+    const modeChangedRun = hasCategorized && lastCategorizedMode !== null && lastCategorizedMode !== categorizationMode
     const uncategorized = allTransactions.filter(
-      (tx) => tx.subcategory === '' && tx.category !== 'Transfer',
+      (tx) => tx.category !== 'Transfer' && (modeChangedRun || tx.subcategory === ''),
     )
     if (uncategorized.length === 0) return
 
@@ -174,6 +180,7 @@ export function App() {
         apiKey,
         (done, total) => setProgress({ done, total }),
         controller.signal,
+        categorizationMode,
       )
 
       // All batches succeeded — apply atomically
@@ -191,6 +198,7 @@ export function App() {
           }),
         })),
       )
+      setLastCategorizedMode(categorizationMode)
       setAppState('done')
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Categorization failed'
@@ -203,7 +211,7 @@ export function App() {
       setProgress(null)
       abortRef.current = null
     }
-  }, [apiKey, allTransactions])
+  }, [apiKey, allTransactions, categorizationMode, hasCategorized, lastCategorizedMode])
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort()
@@ -244,12 +252,14 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files.length])
 
-  const uncategorizedCount = allTransactions.filter(
-    (tx) => tx.subcategory === '' && tx.category !== 'Transfer',
-  ).length
+  const modeChanged = hasCategorized && lastCategorizedMode !== null && lastCategorizedMode !== categorizationMode
+
+  const uncategorizedCount = modeChanged
+    ? allTransactions.filter((tx) => tx.category !== 'Transfer').length
+    : allTransactions.filter((tx) => tx.subcategory === '' && tx.category !== 'Transfer').length
 
   const showCategorizeBtn =
-    uncategorizedCount > 0 && apiKey && appState !== 'categorizing'
+    (uncategorizedCount > 0 || modeChanged) && !!apiKey && appState !== 'categorizing'
 
   const handleTaxOverride = useCallback((id: string, taxArea: TaxArea) => {
     setTaxOverrides((prev) => ({ ...prev, [id]: taxArea }))
@@ -373,15 +383,28 @@ export function App() {
           </div>
         )}
 
+        {allTransactions.length > 0 && apiKey && appState !== 'categorizing' && (
+          <CategorizationModeSelector
+            mode={categorizationMode}
+            onChange={setCategorizationMode}
+          />
+        )}
+
         {showCategorizeBtn && (
           <div className="categorize-wrap">
             <button className="categorize-btn" onClick={handleCategorize}>
-              Categorize with Claude
+              {hasCategorized ? 'Re-categorize with Claude' : 'Categorize with Claude'}
             </button>
             <p className="categorize-hint">
               Sends merchant names to Claude API to classify {uncategorizedCount} transaction{uncategorizedCount !== 1 ? 's' : ''} into spending categories.
               Amounts are never sent.
             </p>
+          </div>
+        )}
+
+        {modeChanged && appState !== 'categorizing' && (
+          <div className="warn-banner">
+            Mode changed to <strong>{categorizationMode}</strong>. Hit <em>Re-categorize with Claude</em> to apply the new breakdown.
           </div>
         )}
 

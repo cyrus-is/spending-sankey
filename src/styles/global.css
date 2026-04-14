@@ -788,6 +788,49 @@ body {
   cursor: not-allowed;
 }
 
+/* ── Categorization Mode Selector ─────────────────────────── */
+.cat-mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cat-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 2px 0;
+  color: #a0aec0;
+  font-size: 0.875rem;
+  user-select: none;
+}
+
+.cat-mode-option--active {
+  color: #e2e8f0;
+}
+
+.cat-mode-radio {
+  accent-color: #3182ce;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cat-mode-label {
+  font-weight: 600;
+}
+
+.cat-mode-desc {
+  color: #718096;
+  font-size: 0.8rem;
+}
+
+.cat-mode-option--active .cat-mode-desc {
+  color: #a0aec0;
+}
+
 /* ── Tax Flag Panel ────────────────────────────────────────── */
 .tax-flag-panel {
   background: #1a202c;
