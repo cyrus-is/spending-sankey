@@ -248,6 +248,7 @@ export function App() {
     const result: Record<string, string> = {}
     for (const tx of filteredTransactions) {
       const spendingCategory = overrides[tx.id] ?? tx.category
+      if (spendingCategory === 'Transfer') continue
       result[tx.id] = mapToEssentialsBucket(spendingCategory)
     }
     return result
