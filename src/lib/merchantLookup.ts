@@ -692,6 +692,41 @@ const INCOME: MerchantRule[] = [
   { name: 'HMRC',                 pattern: /\bHMRC\b/i,                                     category: 'Income', subcategory: 'Tax Refund' },
 ]
 
+const CHILDCARE: MerchantRule[] = [
+  // --- Chain daycare / preschool ---
+  { name: 'Bright Horizons',       pattern: /BRIGHT\s*HORIZONS?/i,                            category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'KinderCare',            pattern: /KINDER\s*CARE|KINDERCARE/i,                       category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Champions',             pattern: /\bCHAMPIONS\b.*(?:BEFORE|AFTER|SCHOOL)/i,        category: 'Childcare', subcategory: 'After School' },
+  { name: 'The Goddard School',    pattern: /GODDARD\s*SCHOOL/i,                               category: 'Childcare', subcategory: 'Preschool' },
+  { name: 'Primrose Schools',      pattern: /PRIMROSE\s*SCHOOL/i,                              category: 'Childcare', subcategory: 'Preschool' },
+  { name: 'La Petite Academy',     pattern: /LA\s*PETITE\s*ACAD/i,                             category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Childtime',             pattern: /\bCHILDTIME\b/i,                                 category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Kiddie Academy',        pattern: /KIDDIE\s*ACADEMY/i,                               category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'The Learning Experience', pattern: /LEARNING\s*EXPERIENCE|TLE\s*SCHOOL/i,           category: 'Childcare', subcategory: 'Preschool' },
+  { name: 'Kids R Kids',           pattern: /KIDS\s*R\s*KIDS/i,                                category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Tutor Time',            pattern: /TUTOR\s*TIME/i,                                   category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Crème de la Crème',     pattern: /CR[EÈ]ME\s*DE\s*LA|CREME\s*DE\s*LA/i,            category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Cadence Education',     pattern: /CADENCE\s*EDUCATION/i,                            category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Learning Care Group',   pattern: /LEARNING\s*CARE\s*GROUP/i,                        category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Children of America',   pattern: /CHILDREN\s*OF\s*AMERICA/i,                        category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Lightbridge Academy',   pattern: /LIGHTBRIDGE\s*ACAD/i,                             category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Celebree School',       pattern: /CELEBREE/i,                                       category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Busy Bees',             pattern: /BUSY\s*BEES/i,                                    category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Montessori',            pattern: /\bMONTESSORI\b/i,                                 category: 'Childcare', subcategory: 'Preschool' },
+
+  // --- UK childcare ---
+  { name: 'Kidsunlimited',         pattern: /KIDSUNLIMITED|KIDS\s*UNLIMITED/i,                 category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Bright Little Stars',   pattern: /BRIGHT\s*LITTLE\s*STARS/i,                        category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'N Family Club',         pattern: /N\s*FAMILY\s*CLUB/i,                              category: 'Childcare', subcategory: 'Daycare' },
+
+  // --- Generic patterns ---
+  { name: 'Daycare (generic)',     pattern: /\bDAYCARE\b|\bDAY\s*CARE\b/i,                     category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Childcare (generic)',   pattern: /\bCHILD\s*CARE\b|\bCHILDCARE\b/i,                 category: 'Childcare', subcategory: 'Daycare' },
+  { name: 'Preschool (generic)',   pattern: /\bPRESCHOOL\b|\bPRE[\s-]SCHOOL\b/i,               category: 'Childcare', subcategory: 'Preschool' },
+  { name: 'After School (generic)', pattern: /\bAFTER\s*SCHOOL\b/i,                            category: 'Childcare', subcategory: 'After School' },
+  { name: 'Summer Camp (generic)', pattern: /\bSUMMER\s*CAMP\b/i,                              category: 'Childcare', subcategory: 'Summer Camp' },
+]
+
 // ---------------------------------------------------------------------------
 // Consolidated rule list — ORDER MATTERS (first match wins)
 // ---------------------------------------------------------------------------
@@ -716,6 +751,8 @@ export const ALL_RULES: MerchantRule[] = [
   ...SHOPPING,
   // Entertainment
   ...ENTERTAINMENT,
+  // Childcare — specific chain names, won't conflict
+  ...CHILDCARE,
   // Health
   ...HEALTH,
   // Travel

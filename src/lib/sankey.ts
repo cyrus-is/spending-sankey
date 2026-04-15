@@ -35,6 +35,7 @@ export interface SankeyData {
 const CATEGORY_COLORS: Record<string, string> = {
   Income: '#68d391',
   Housing: '#fc8181',
+  Childcare: '#f687b3',
   Groceries: '#f6ad55',
   Dining: '#f9a74b',
   Transport: '#76e4f7',
@@ -73,7 +74,7 @@ export function buildSankeyData(
   // Categories that, when assigned to a credit transaction, signal a refund/return
   // rather than true income. Claude assigns these when it recognises the merchant.
   const EXPENSE_CATEGORIES = new Set([
-    'Groceries', 'Dining', 'Housing', 'Transport', 'Travel',
+    'Groceries', 'Dining', 'Housing', 'Childcare', 'Transport', 'Travel',
     'Shopping', 'Entertainment', 'Health', 'Subscriptions',
   ])
 

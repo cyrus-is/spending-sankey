@@ -23,6 +23,7 @@ export interface LoadedFile {
 export type Category =
   | 'Income'
   | 'Housing'
+  | 'Childcare'
   | 'Groceries'
   | 'Dining'
   | 'Transport'
@@ -37,6 +38,7 @@ export type Category =
 export const CATEGORIES: Category[] = [
   'Income',
   'Housing',
+  'Childcare',
   'Groceries',
   'Dining',
   'Transport',

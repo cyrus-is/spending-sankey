@@ -81,6 +81,7 @@ const VENDOR_INDICATOR_PATTERNS: RegExp[] = [
   /\bpharmacy\b|\bchemist\b/i,
   /\bretail\b|\boutlet\b|\bshop\b(?!\s*\w+\s+payment)/i,
   /\bdeli\b|\bbakery\b|\bbutcher\b/i,
+  /\bdaycare\b|\bchildcare\b|\bchild\s*care\b|\bpreschool\b/i,
 ]
 
 export function isMerchantCredit(description: string): boolean {

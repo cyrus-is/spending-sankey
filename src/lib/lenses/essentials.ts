@@ -4,6 +4,7 @@ import type { EssentialsBucket } from './types'
 const BUCKET_MAP: Record<Category, EssentialsBucket> = {
   // Hard to reduce — locked-in recurring costs
   Housing:       'fixed-essential',
+  Childcare:     'fixed-essential',
   Health:        'fixed-essential',
   // Necessary but amount varies month to month
   Groceries:     'variable-essential',

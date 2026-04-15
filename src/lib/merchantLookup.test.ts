@@ -405,9 +405,27 @@ describe('rule coverage', () => {
     expect(PROCESSOR_PREFIXES.length).toBeGreaterThanOrEqual(10)
   })
 
+  it('classifies childcare chain daycare centers', () => {
+    expect(classifyByMerchant('BRIGHT HORIZONS CHILDCARE')?.category).toBe('Childcare')
+    expect(classifyByMerchant('KINDERCARE LEARNING CTR')?.category).toBe('Childcare')
+    expect(classifyByMerchant('THE GODDARD SCHOOL #123')?.category).toBe('Childcare')
+    expect(classifyByMerchant('PRIMROSE SCHOOL OF OAK')?.category).toBe('Childcare')
+    expect(classifyByMerchant('LA PETITE ACADEMY')?.category).toBe('Childcare')
+    expect(classifyByMerchant('KIDDIE ACADEMY #456')?.category).toBe('Childcare')
+  })
+
+  it('classifies generic childcare descriptions', () => {
+    expect(classifyByMerchant('SUNSHINE DAYCARE')?.category).toBe('Childcare')
+    expect(classifyByMerchant('ABC CHILD CARE CENTER')?.category).toBe('Childcare')
+    expect(classifyByMerchant('LITTLE STARS PRESCHOOL')?.category).toBe('Childcare')
+    expect(classifyByMerchant('SUMMER CAMP REGISTRATION')?.category).toBe('Childcare')
+    expect(classifyByMerchant('AFTER SCHOOL PROGRAM')?.category).toBe('Childcare')
+    expect(classifyByMerchant('MONTESSORI ACADEMY')?.category).toBe('Childcare')
+  })
+
   it('all rules have valid categories', () => {
     const validCategories = new Set([
-      'Income', 'Housing', 'Groceries', 'Dining', 'Transport', 'Travel',
+      'Income', 'Housing', 'Childcare', 'Groceries', 'Dining', 'Transport', 'Travel',
       'Shopping', 'Entertainment', 'Health', 'Subscriptions', 'Transfer', 'Other',
     ])
     for (const rule of ALL_RULES) {

@@ -16,6 +16,7 @@ interface CategorizationResult {
  *  category name itself (e.g. "Shopping" for Shopping/Other). */
 export const SUBCATEGORY_TAXONOMY: Record<string, string[]> = {
   Housing:       ['Rent/Mortgage', 'Utilities', 'Internet/Cable', 'Phone Bill', 'Insurance'],
+  Childcare:     ['Daycare', 'Preschool', 'After School', 'Summer Camp', 'Nanny/Babysitter'],
   Groceries:     ['Supermarket', 'Warehouse Club', 'Grocery Delivery', 'Specialty Food'],
   Dining:        ['Restaurant', 'Coffee Shop', 'Food Delivery', 'Fast Food', 'Bar'],
   Transport:     ['Gas Station', 'Rideshare', 'Parking', 'Public Transit', 'Auto Insurance'],
@@ -34,6 +35,7 @@ const SYSTEM_PROMPT = `You are a personal finance categorization assistant. Your
 For each transaction, assign EXACTLY one of these category strings (use the exact spelling):
 - Income
 - Housing
+- Childcare
 - Groceries
 - Dining
 - Transport
@@ -48,6 +50,7 @@ For each transaction, assign EXACTLY one of these category strings (use the exac
 Category rules:
 - Income: salary, payroll, direct deposits, interest earned, tax refunds, side job payments, freelance deposits
 - Housing: rent, mortgage, utilities (electric, gas, water), internet/cable, renters/home insurance, phone bill (AT&T, Comcast)
+- Childcare: daycare centers (Bright Horizons, KinderCare, Goddard School, Primrose), preschools, after-school programs, summer camps, nanny/babysitter payments, au pair agencies
 - Groceries: supermarkets and warehouse stores for food (Whole Foods, Trader Joe's, Costco, Sainsbury's, Tesco, M&S Food, Instacart delivery)
 - Dining: restaurants, coffee shops (Starbucks, Blue Bottle, Costa, Pret A Manger), food delivery apps (DoorDash, GrubHub, Uber Eats, Deliveroo), fast food (Chipotle, McDonald's), Sweetgreen
 - Transport: gas stations (Shell, Costco Gas), parking, rideshare trips (Uber trip, Lyft), public transit (Oyster/TfL), auto insurance, car payments
@@ -80,6 +83,7 @@ const DETAILED_SYSTEM_PROMPT = `You are a personal finance categorization assist
 For each transaction, assign EXACTLY one category AND one subcategory from the lists below (use exact spelling):
 
 Housing:       Rent/Mortgage | Utilities | Internet/Cable | Phone Bill | Insurance
+Childcare:     Daycare | Preschool | After School | Summer Camp | Nanny/Babysitter
 Groceries:     Supermarket | Warehouse Club | Grocery Delivery | Specialty Food
 Dining:        Restaurant | Coffee Shop | Food Delivery | Fast Food | Bar
 Transport:     Gas Station | Rideshare | Parking | Public Transit | Auto Insurance
@@ -95,6 +99,7 @@ Other:         Other
 Category rules:
 - Income: salary, payroll, direct deposits, interest earned, tax refunds, side job payments, freelance deposits
 - Housing: rent, mortgage, utilities (electric, gas, water), internet/cable, renters/home insurance, phone bill (AT&T, Comcast)
+- Childcare: daycare centers (Bright Horizons, KinderCare, Goddard School, Primrose), preschools, after-school programs, summer camps, nanny/babysitter payments, au pair agencies
 - Groceries: supermarkets and warehouse stores for food (Whole Foods, Trader Joe's, Costco, Sainsbury's, Tesco, M&S Food, Instacart delivery)
 - Dining: restaurants, coffee shops (Starbucks, Blue Bottle, Costa, Pret A Manger), food delivery apps (DoorDash, GrubHub, Uber Eats, Deliveroo), fast food (Chipotle, McDonald's), Sweetgreen
 - Transport: gas stations (Shell, Costco Gas), parking, rideshare trips (Uber trip, Lyft), public transit (Oyster/TfL), auto insurance, car payments
@@ -165,6 +170,11 @@ const CATEGORY_ALIASES: Record<string, string> = {
   subscription: 'Subscriptions', subscriptions: 'Subscriptions',
   'streaming services': 'Subscriptions', 'recurring services': 'Subscriptions',
   'ai api service': 'Subscriptions', saas: 'Subscriptions',
+  // Childcare
+  childcare: 'Childcare', daycare: 'Childcare', 'child care': 'Childcare',
+  preschool: 'Childcare', 'pre-school': 'Childcare', 'after school': 'Childcare',
+  'summer camp': 'Childcare', nanny: 'Childcare', babysitter: 'Childcare',
+  'dependent care': 'Childcare',
   // Housing
   housing: 'Housing', rent: 'Housing', mortgage: 'Housing',
   utilities: 'Housing', utility: 'Housing', insurance: 'Housing',
