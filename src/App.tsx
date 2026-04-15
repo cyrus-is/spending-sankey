@@ -52,6 +52,7 @@ export function App() {
   /** The mode that was used for the last successful categorization run */
   const [lastCategorizedMode, setLastCategorizedMode] = useState<CategorizationMode | null>(null)
   const [budget, setBudget] = useState<Budget | null>(() => loadBudget())
+  const [showBudgetOverlay, setShowBudgetOverlay] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files — memoized so downstream memos get a stable reference
@@ -350,6 +351,18 @@ export function App() {
     return countMonths(minDate, maxDate) >= 3
   }, [minDate, maxDate])
 
+  // Budget overlay: category → monthly budgeted amount (for SankeyChart ghost rects)
+  const budgetOverlayMap = useMemo(() => {
+    if (!budget || !showBudgetOverlay || activeLens !== 'spending') return undefined
+    const map: Record<string, number> = {}
+    for (const line of budget.expenses) {
+      if (line.type === 'one-time') continue
+      // Aggregate by category (multiple merchant lines may share a category)
+      map[line.category] = (map[line.category] ?? 0) + line.amount
+    }
+    return map
+  }, [budget, showBudgetOverlay, activeLens])
+
   const sankeyData = useMemo(() => {
     if (!hasCategorized) return null
     if (activeLens === 'essentials') {
@@ -515,6 +528,19 @@ export function App() {
           </div>
         )}
 
+        {budget && activeLens === 'spending' && hasCategorized && (
+          <div className="budget-overlay-toggle">
+            <label className="budget-overlay-label">
+              <input
+                type="checkbox"
+                checked={showBudgetOverlay}
+                onChange={(e) => setShowBudgetOverlay(e.target.checked)}
+              />
+              Show budget limits on chart
+            </label>
+          </div>
+        )}
+
         {sankeyIsEmpty ? (
           <div className="empty-state">
             <p>No {activeLens === 'tax-us' ? 'deductible expenses' : 'income or expenses'} to display for this date range.</p>
@@ -532,6 +558,7 @@ export function App() {
               onMergeThresholdChange={setMergeThreshold}
               width={categorizationMode === 'detailed' && activeLens === 'spending' ? 1200 : undefined}
               height={categorizationMode === 'detailed' && activeLens === 'spending' ? 560 : undefined}
+              budgetOverlay={budgetOverlayMap}
             />
           )
         )}

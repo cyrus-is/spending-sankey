@@ -1421,3 +1421,28 @@ body {
   font-weight: 700;
   color: #e2e8f0;
 }
+
+/* ── Budget Overlay Toggle ───────────────────────────────────────────────── */
+
+.budget-overlay-toggle {
+  display: flex;
+  align-items: center;
+  margin: 8px 0 4px;
+}
+
+.budget-overlay-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #a0aec0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.budget-overlay-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #63b3ed;
+  cursor: pointer;
+}

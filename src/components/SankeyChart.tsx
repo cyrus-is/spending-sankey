@@ -13,6 +13,12 @@ interface SankeyChartProps {
   width?: number
   /** SVG height — defaults to 500. Pass 560 for detailed (4-column) mode. */
   height?: number
+  /**
+   * Optional budget overlay: maps category name (e.g. "Groceries") to monthly budgeted amount.
+   * When set, draws dashed ghost rects at the budgeted height on expense category nodes,
+   * and applies a red tint to over-budget nodes.
+   */
+  budgetOverlay?: Record<string, number>
 }
 
 // d3-sankey node/link types
@@ -40,7 +46,7 @@ const DEFAULT_WIDTH = 900
 const DEFAULT_HEIGHT = 500
 const MARGIN = { top: 10, right: 160, bottom: 10, left: 160 }
 
-export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT }: SankeyChartProps) {
+export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, budgetOverlay }: SankeyChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -139,7 +145,16 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
       .attr('y', (d) => d.y0 ?? 0)
       .attr('width', (d) => (d.x1 ?? 0) - (d.x0 ?? 0))
       .attr('height', (d) => Math.max(1, (d.y1 ?? 0) - (d.y0 ?? 0)))
-      .attr('fill', (d) => d.id === 'cat:non-deductible' ? '#4a5568' : d.color)
+      .attr('fill', (d) => {
+        if (d.id === 'cat:non-deductible') return '#4a5568'
+        // Red tint if over budget
+        if (budgetOverlay && d.id.startsWith('cat:')) {
+          const category = d.id.slice(4)
+          const budgeted = budgetOverlay[category]
+          if (budgeted !== undefined && (d.value ?? 0) > budgeted) return '#c53030'
+        }
+        return d.color
+      })
       .attr('opacity', (d) => d.id === 'cat:non-deductible' ? 0.5 : 1)
       .attr('rx', 2)
       .style('cursor', (d) => (d.topVendors && d.topVendors.length > 0 ? 'pointer' : 'default'))
@@ -175,7 +190,36 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
         })
         return `${d.label} ${val}`
       })
-  }, [data, width, height])
+    // Budget overlay: dashed ghost rects showing budgeted amount on expense category nodes
+    if (budgetOverlay) {
+      const overlayNodes = nodes.filter((d) => d.id.startsWith('cat:'))
+      const overlayGroup = g.append('g').attr('class', 'budget-overlay')
+
+      overlayNodes.forEach((d) => {
+        const category = d.id.slice(4)
+        const budgeted = budgetOverlay[category]
+        if (budgeted === undefined || budgeted <= 0) return
+
+        const actualHeight = Math.max(1, (d.y1 ?? 0) - (d.y0 ?? 0))
+        const scale = actualHeight / (d.value ?? 1)
+        const ghostHeight = Math.max(1, budgeted * scale)
+        const nodeWidth = (d.x1 ?? 0) - (d.x0 ?? 0)
+
+        overlayGroup
+          .append('rect')
+          .attr('x', (d.x0 ?? 0))
+          .attr('y', (d.y0 ?? 0))
+          .attr('width', nodeWidth)
+          .attr('height', ghostHeight)
+          .attr('fill', 'none')
+          .attr('stroke', '#e2e8f0')
+          .attr('stroke-width', 1.5)
+          .attr('stroke-dasharray', '4,3')
+          .attr('rx', 2)
+          .attr('opacity', 0.6)
+      })
+    }
+  }, [data, width, height, budgetOverlay])
 
   if (data.nodes.length === 0) return null
 
