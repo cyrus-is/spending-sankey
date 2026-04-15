@@ -1059,3 +1059,365 @@ body {
   color: #718096;
   font-style: italic;
 }
+
+/* ── Budget Panel ─────────────────────────────────────────────────────────── */
+
+.budget-panel {
+  margin: 24px 0;
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+
+.budget-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.budget-panel__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.budget-panel__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.budget-action-btn {
+  padding: 6px 14px;
+  border-radius: 5px;
+  border: 1px solid #4a5568;
+  background: #2d3748;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.budget-action-btn:hover {
+  background: #3d4f63;
+  border-color: #63b3ed;
+}
+
+.budget-action-btn--primary {
+  background: #2b6cb0;
+  border-color: #3182ce;
+  color: #fff;
+}
+
+.budget-action-btn--primary:hover {
+  background: #3182ce;
+}
+
+.budget-action-btn--danger {
+  background: #742a2a;
+  border-color: #c53030;
+  color: #fed7d7;
+}
+
+.budget-action-btn--danger:hover {
+  background: #9b2c2c;
+}
+
+.budget-accuracy-warn {
+  background: #744210;
+  border: 1px solid #d69e2e;
+  color: #fefcbf;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.budget-import-error {
+  background: #742a2a;
+  border: 1px solid #c53030;
+  color: #fed7d7;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.budget-empty-hint {
+  color: #718096;
+  font-size: 14px;
+  text-align: center;
+  margin: 24px 0;
+}
+
+/* View tabs */
+
+.budget-view-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #2d3748;
+}
+
+.budget-view-tab {
+  padding: 8px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #718096;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.budget-view-tab:hover {
+  color: #e2e8f0;
+}
+
+.budget-view-tab--active {
+  color: #63b3ed;
+  border-bottom-color: #63b3ed;
+}
+
+/* Budget table */
+
+.budget-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 20px 0 8px;
+}
+
+.budget-section-title:first-child {
+  margin-top: 0;
+}
+
+.budget-table-wrap {
+  overflow-x: auto;
+}
+
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.budget-table th {
+  text-align: left;
+  color: #718096;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-bottom: 1px solid #2d3748;
+}
+
+.budget-table td {
+  padding: 7px 12px;
+  color: #e2e8f0;
+  border-bottom: 1px solid #1a202c;
+}
+
+.budget-row--one-time td {
+  color: #718096;
+  font-style: italic;
+}
+
+.budget-total-row td {
+  padding: 8px 12px;
+  border-top: 1px solid #2d3748;
+  border-bottom: none;
+  color: #e2e8f0;
+}
+
+.budget-surplus-row td {
+  padding: 6px 12px;
+  border-bottom: none;
+}
+
+.budget-surplus-row--positive td {
+  color: #68d391;
+}
+
+.budget-surplus-row--negative td {
+  color: #fc8181;
+}
+
+/* Editable amount */
+
+.budget-amount {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.budget-amount:hover {
+  background: #2d3748;
+}
+
+.budget-amount--disabled {
+  color: #4a5568;
+}
+
+.budget-amount-input {
+  width: 90px;
+  background: #2d3748;
+  border: 1px solid #63b3ed;
+  border-radius: 3px;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 2px 6px;
+  font-family: inherit;
+}
+
+/* Editable notes */
+
+.budget-notes {
+  background: none;
+  border: none;
+  color: #718096;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: inherit;
+  text-align: left;
+}
+
+.budget-notes:hover {
+  background: #2d3748;
+  color: #a0aec0;
+}
+
+.budget-notes--empty {
+  font-style: italic;
+  color: #4a5568;
+}
+
+.budget-notes-input {
+  width: 100%;
+  min-width: 120px;
+  background: #2d3748;
+  border: 1px solid #63b3ed;
+  border-radius: 3px;
+  color: #e2e8f0;
+  font-size: 13px;
+  padding: 2px 6px;
+  font-family: inherit;
+}
+
+.budget-type-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #2d3748;
+  color: #a0aec0;
+}
+
+/* ── Comparison Table ────────────────────────────────────────────────────── */
+
+.comparison-table-wrap {
+  overflow-x: auto;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.comparison-table th {
+  text-align: left;
+  color: #718096;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-bottom: 1px solid #2d3748;
+}
+
+.comparison-table td {
+  padding: 7px 12px;
+  color: #e2e8f0;
+  border-bottom: 1px solid #1a202c;
+}
+
+.comparison-row--over-budget {
+  background: rgba(252, 129, 129, 0.08);
+}
+
+.comparison-row--over-income {
+  background: rgba(104, 211, 145, 0.06);
+}
+
+.comparison-row--unbudgeted td:first-child::after {
+  content: ' *';
+  color: #4a5568;
+}
+
+.comparison-diff--good {
+  color: #68d391;
+}
+
+.comparison-diff--bad {
+  color: #fc8181;
+}
+
+.comparison-total-row td {
+  padding: 8px 12px;
+  border-top: 1px solid #2d3748;
+  border-bottom: none;
+  color: #e2e8f0;
+}
+
+.comparison-net {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #2d3748;
+  border-radius: 6px;
+}
+
+.comparison-net-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comparison-net-item--good .comparison-net-value {
+  color: #68d391;
+}
+
+.comparison-net-item--warn .comparison-net-value {
+  color: #fc8181;
+}
+
+.comparison-net-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #718096;
+}
+
+.comparison-net-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e2e8f0;
+}

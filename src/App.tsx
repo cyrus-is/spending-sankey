@@ -22,6 +22,10 @@ import { categorizeTransactions } from './lib/categorize'
 import { buildSankeyData } from './lib/sankey'
 import { detectTransfers } from './lib/transfers'
 import type { LoadedFile } from './lib/types'
+import type { Budget } from './lib/budget-types'
+import { generateBudget, compareBudgetToActual, countMonths } from './lib/budget'
+import { saveBudget, loadBudget, clearBudget } from './lib/budgetStorage'
+import { BudgetPanel } from './components/BudgetPanel'
 
 let fileCounter = 0
 
@@ -47,6 +51,7 @@ export function App() {
   const [categorizationMode, setCategorizationMode] = useState<CategorizationMode>('simple')
   /** The mode that was used for the last successful categorization run */
   const [lastCategorizedMode, setLastCategorizedMode] = useState<CategorizationMode | null>(null)
+  const [budget, setBudget] = useState<Budget | null>(() => loadBudget())
   const abortRef = useRef<AbortController | null>(null)
 
   // All transactions across all files — memoized so downstream memos get a stable reference
@@ -265,6 +270,31 @@ export function App() {
     setTaxOverrides((prev) => ({ ...prev, [id]: taxArea }))
   }, [])
 
+  const handleGenerateBudget = useCallback(() => {
+    if (!hasCategorized || allTransactions.length === 0) return
+    const sourceRange = minDate && maxDate
+      ? { start: minDate, end: maxDate }
+      : { start: toDateStr(new Date()), end: toDateStr(new Date()) }
+    const generated = generateBudget(allTransactions, sourceRange)
+    setBudget(generated)
+    saveBudget(generated)
+  }, [hasCategorized, allTransactions, minDate, maxDate])
+
+  const handleUpdateBudget = useCallback((updated: Budget) => {
+    setBudget(updated)
+    saveBudget(updated)
+  }, [])
+
+  const handleImportBudget = useCallback((imported: Budget) => {
+    setBudget(imported)
+    saveBudget(imported)
+  }, [])
+
+  const handleClearBudget = useCallback(() => {
+    setBudget(null)
+    clearBudget()
+  }, [])
+
   // Essentials lens: remap each tx's spending category to a bucket name
   const essentialsOverrides = useMemo(() => {
     if (activeLens !== 'essentials') return {}
@@ -308,6 +338,17 @@ export function App() {
     }
     return result
   }, [activeLens, taxResults, taxOverrides, filteredTransactions])
+
+  const budgetComparison = useMemo(() => {
+    if (!budget || !hasCategorized || filteredTransactions.length === 0) return null
+    if (!dateRange.start || !dateRange.end) return null
+    return compareBudgetToActual(budget, filteredTransactions, overrides, dateRange)
+  }, [budget, hasCategorized, filteredTransactions, overrides, dateRange])
+
+  const hasEnoughHistory = useMemo(() => {
+    if (!minDate || !maxDate) return false
+    return countMonths(minDate, maxDate) >= 3
+  }, [minDate, maxDate])
 
   const sankeyData = useMemo(() => {
     if (!hasCategorized) return null
@@ -516,6 +557,17 @@ export function App() {
             />
           </>
         )}
+
+        <BudgetPanel
+          budget={budget}
+          comparison={budgetComparison}
+          canGenerate={hasCategorized}
+          hasEnoughHistory={hasEnoughHistory}
+          onGenerate={handleGenerateBudget}
+          onUpdate={handleUpdateBudget}
+          onImport={handleImportBudget}
+          onClear={handleClearBudget}
+        />
 
         {hasCategorized ? (
           <TransactionTable
