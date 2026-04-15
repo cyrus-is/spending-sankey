@@ -77,6 +77,11 @@ IMPORTANT rules:
 - Streaming/personal subscriptions: non-deductible.
 - Professional software (GitHub, Notion, Adobe, Zoom, Anthropic API): schedule-c.
 
+Each transaction includes an amount in dollars. Use it as context:
+- A $15 restaurant charge is likely personal dining (non-deductible). A $200 restaurant with a business-sounding merchant could be a client dinner (schedule-c, ambiguous).
+- Small recurring charges at software companies ($10-50/mo) are likely SaaS subscriptions (schedule-c for business tools).
+- Large medical charges ($500+) are more likely to be significant out-of-pocket expenses (hsa-medical).
+
 Set "ambiguous" to true if the transaction could PLAUSIBLY belong to 2 or more tax areas and you are not confident. Common ambiguous cases: Amazon charge (office supplies or personal?), restaurant (business meal or personal dining?), flight (business travel or vacation?), phone bill (home office deduction or personal?). When ambiguous, still pick your best guess for taxArea, but set ambiguous: true.
 
 IMPORTANT: Respond ONLY with a valid JSON array. No markdown, no explanation, no code fences.
@@ -170,7 +175,7 @@ export async function taxCategorize(
 
   const runBatch = async (batch: Transaction[]): Promise<TaxResult[]> => {
     if (signal?.aborted) throw new Error('Tax categorization cancelled.')
-    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type }))
+    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type, amount: tx.amount }))
     const requestedIds = batch.map((tx) => tx.id)
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',

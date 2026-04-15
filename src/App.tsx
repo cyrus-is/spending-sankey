@@ -449,8 +449,8 @@ export function App() {
               {hasCategorized ? 'Re-categorize with Claude' : 'Categorize with Claude'}
             </button>
             <p className="categorize-hint">
-              Sends merchant names to Claude API to classify {uncategorizedCount} transaction{uncategorizedCount !== 1 ? 's' : ''} into spending categories.
-              Amounts are never sent.
+              Sends merchant names and amounts to Claude API to classify {uncategorizedCount} transaction{uncategorizedCount !== 1 ? 's' : ''} into spending categories.
+              Your browser calls Claude directly — no data passes through our servers.
             </p>
           </div>
         )}

@@ -58,6 +58,11 @@ Category rules:
 - Transfer: Zelle, Venmo, account-to-account transfers, savings transfers. Do NOT use Transfer for credit card autopay — those are flagged separately.
 - Other: truly unrecognizable merchants only. When in doubt, pick the most likely category above.
 
+Each transaction includes an amount in dollars. Use it as context when the merchant name is ambiguous:
+- A small Starbucks charge ($5) is Coffee Shop; a large one ($200+) might be catering
+- A small airline charge ($25-75) is likely a fee (Transport); a large one ($300+) is a flight (Travel)
+- Large one-time charges at a merchant that's usually small may indicate a different purchase type
+
 Also provide a short subcategory (2-3 words). Examples:
 {"id":"tx1","category":"Groceries","subcategory":"Supermarket"}
 {"id":"tx2","category":"Dining","subcategory":"Food Delivery"}
@@ -99,6 +104,11 @@ Category rules:
 - Subscriptions: Netflix, Spotify, Hulu, Apple.com/bill, Adobe, Zoom, Notion, ANTHROPIC *API, recurring SaaS
 - Transfer: Zelle, Venmo, account-to-account transfers, savings transfers. Do NOT use Transfer for credit card autopay.
 - Other: truly unrecognizable merchants only. When in doubt, pick the most likely category above.
+
+Each transaction includes an amount in dollars. Use it as context when the merchant name is ambiguous:
+- A small Starbucks charge ($5) is Coffee Shop; a large one ($200+) might be catering
+- A small airline charge ($25-75) is likely a fee (Transport); a large one ($300+) is a flight (Travel)
+- Large one-time charges at a merchant that's usually small may indicate a different purchase type
 
 Pick the closest subcategory from the list for that category. If nothing fits, use the category name itself (e.g. "Other" for Other).
 
@@ -309,7 +319,7 @@ export async function categorizeTransactions(
 
   const runBatch = async (batch: Transaction[]): Promise<CategorizationResult[]> => {
     if (signal?.aborted) throw new Error('Categorization cancelled.')
-    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type }))
+    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type, amount: tx.amount }))
     const requestedIds = batch.map((tx) => tx.id)
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',

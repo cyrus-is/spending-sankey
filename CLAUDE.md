@@ -73,7 +73,7 @@ npm run lint
 ## Key Decisions
 
 1. **Client-side only.** No backend, no database. All processing happens in the browser. The only network call is to Claude's API for CSV format detection and transaction categorization.
-2. **Privacy-first.** Bank data never touches a server we control. The Claude API call sends transaction descriptions (not amounts or account numbers) for categorization. Users provide their own API key.
+2. **Privacy-first.** Bank data never touches a server we control. The Claude API call sends merchant descriptions, amounts, and debit/credit type for categorization — no account numbers, balances, or PII. Users provide their own API key. See `docs/privacy.md` for the full data flow.
 3. **CSV-first, not bank-API.** Users export CSVs manually. This avoids Plaid/bank integration complexity and the trust barrier of sharing credentials. Every bank supports CSV export.
 4. **Budget from reality.** Phase 1 reflects actual spending patterns — no prescriptive budgeting. Phase 2 surfaces observations without being preachy.
 
