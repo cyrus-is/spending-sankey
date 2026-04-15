@@ -6,7 +6,7 @@ import type {
   BudgetComparisonResult,
 } from './budget-types'
 import { detectRecurring } from './recurring'
-import { normalizeVendorName, normalizeSource } from './normalize'
+import { normalizeVendorName, normalizeSource, isKnownMerchant } from './normalize'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -91,9 +91,16 @@ export function generateBudget(
     (tx) => tx.type === 'credit' && !EXPENSE_CATEGORIES.has(tx.category) && tx.category !== 'Transfer',
   )
 
+  // Sources that normalizeSource maps to these labels are not true income
+  const NON_INCOME_SOURCES = new Set(['Refunds', 'Peer Transfer'])
+
   const incomeBySource = new Map<string, number[]>()
   for (const tx of incomeTransactions) {
     const source = normalizeSource(tx.description)
+    // Skip refunds and peer transfers
+    if (NON_INCOME_SOURCES.has(source)) continue
+    // Skip credits from known retail merchants — these are returns/credits, not income
+    if (isKnownMerchant(tx.description)) continue
     if (!incomeBySource.has(source)) incomeBySource.set(source, [])
     incomeBySource.get(source)!.push(tx.amount)
   }
@@ -263,12 +270,15 @@ export function compareBudgetToActual(
   // Apply overrides and filter
   const txns = transactions.map((tx) => ({ ...tx, category: overrides[tx.id] ?? tx.category }))
 
-  // Actual income: credits that aren't refunds or transfers
+  // Actual income: credits that aren't refunds or transfers — same filters as generateBudget
+  const NON_INCOME_SOURCES = new Set(['Refunds', 'Peer Transfer'])
   const actualIncomeBySource = new Map<string, number>()
   for (const tx of txns) {
     if (tx.type !== 'credit') continue
     if (EXPENSE_CATEGORIES.has(tx.category) || tx.category === 'Transfer') continue
     const source = normalizeSource(tx.description)
+    if (NON_INCOME_SOURCES.has(source)) continue
+    if (isKnownMerchant(tx.description)) continue
     actualIncomeBySource.set(source, (actualIncomeBySource.get(source) ?? 0) + tx.amount)
   }
 

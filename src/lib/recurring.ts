@@ -43,6 +43,7 @@ export function detectRecurring(transactions: Transaction[]): RecurringMerchant[
   const byMerchant = new Map<string, Transaction[]>()
   for (const tx of transactions) {
     if (tx.type !== 'debit') continue
+    if (tx.category === 'Transfer') continue   // internal transfers aren't expenses
     const merchant = normalizeVendorName(tx.description)
     if (!byMerchant.has(merchant)) byMerchant.set(merchant, [])
     byMerchant.get(merchant)!.push(tx)

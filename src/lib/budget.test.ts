@@ -62,6 +62,53 @@ describe('generateBudget', () => {
     expect(salaryLine!.amount).toBeGreaterThan(0)
   })
 
+  it('excludes Refunds and Peer Transfer credits from income', () => {
+    const txns: Transaction[] = [
+      // True income
+      makeTx({ description: 'ACME PAYROLL', amount: 5000, type: 'credit', category: 'Income', date: new Date('2024-01-15') }),
+      // Refund — normalizeSource identifies as 'Refunds'
+      makeTx({ description: 'AMAZON REFUND', amount: 25, type: 'credit', category: 'Income', date: new Date('2024-01-20') }),
+      // Peer transfer — normalizeSource identifies as 'Peer Transfer'
+      makeTx({ description: 'VENMO PAYMENT FROM FRIEND', amount: 50, type: 'credit', category: 'Income', date: new Date('2024-01-22') }),
+    ]
+    const budget = generateBudget(txns, { start: '2024-01-01', end: '2024-01-31' })
+    const incomeSources = budget.income.map((l) => l.category)
+    expect(incomeSources).not.toContain('Refunds')
+    expect(incomeSources).not.toContain('Peer Transfer')
+    // True income still present
+    expect(budget.income.length).toBeGreaterThan(0)
+  })
+
+  it('excludes known merchant credits from income (returns/refunds mislabeled as Income)', () => {
+    const txns: Transaction[] = [
+      // True income
+      makeTx({ description: 'DIRECT DEPOSIT SALARY', amount: 4000, type: 'credit', category: 'Income', date: new Date('2024-01-15') }),
+      // Amazon credit — likely a return, should NOT appear as income
+      makeTx({ description: 'AMAZON.COM', amount: 30, type: 'credit', category: 'Income', date: new Date('2024-01-18') }),
+      // Tesco credit — supermarket return, should NOT appear as income
+      makeTx({ description: 'TESCO STORES', amount: 12, type: 'credit', category: 'Income', date: new Date('2024-01-19') }),
+    ]
+    const budget = generateBudget(txns, { start: '2024-01-01', end: '2024-01-31' })
+    const incomeSources = budget.income.map((l) => l.category)
+    expect(incomeSources).not.toContain('Amazon')
+    expect(incomeSources).not.toContain('Tesco')
+    // Salary still present
+    expect(incomeSources).toContain('Salary')
+  })
+
+  it('excludes Transfer-category debits from recurring detection', () => {
+    // Savings transfer happens monthly — should NOT appear as a fixed expense
+    const txns: Transaction[] = [
+      ...series({ description: 'TRANSFER TO SAVINGS', amount: 500, category: 'Transfer', date: new Date('2024-01-01') }, 3),
+    ]
+    const budget = generateBudget(txns, { start: '2024-01-01', end: '2024-03-31' })
+    const transferLine = budget.expenses.find((l) => l.category === 'Transfer')
+    expect(transferLine).toBeUndefined()
+    // Also check no recurring merchant for it
+    const savingsLine = budget.expenses.find((l) => l.merchant?.toLowerCase().includes('savings'))
+    expect(savingsLine).toBeUndefined()
+  })
+
   it('generates fixed expense lines from recurring merchants', () => {
     const txns: Transaction[] = [
       ...series({ description: 'NETFLIX.COM', amount: 15.99, category: 'Subscriptions', date: new Date('2024-01-10') }, 3),
