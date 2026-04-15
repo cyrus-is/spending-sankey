@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Transaction } from './types'
 import { CATEGORIES } from './types'
 import { getCached, setCached } from './categorizationCache'
+import { classifyByMerchant } from './merchantLookup'
 
 interface CategorizationResult {
   id: string
@@ -298,9 +299,21 @@ export async function categorizeTransactions(
   const allResults: CategorizationResult[] = []
   let done = 0
 
-  // Resolve cache hits upfront — only send misses to Claude
-  const cacheMisses: Transaction[] = []
+  // Layer 1: Static merchant pre-classification — known merchants skip API entirely
+  const afterMerchantLookup: Transaction[] = []
   for (const tx of transactions) {
+    const match = classifyByMerchant(tx.description)
+    if (match) {
+      allResults.push({ id: tx.id, category: match.category, subcategory: match.subcategory })
+      done++
+    } else {
+      afterMerchantLookup.push(tx)
+    }
+  }
+
+  // Layer 2: Resolve cache hits — only send remaining misses to Claude
+  const cacheMisses: Transaction[] = []
+  for (const tx of afterMerchantLookup) {
     const cached = getCached(tx.description, tx.amount, tx.type, mode)
     if (cached) {
       allResults.push({ id: tx.id, ...cached })

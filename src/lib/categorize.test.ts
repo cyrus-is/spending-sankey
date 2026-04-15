@@ -61,13 +61,29 @@ describe('categorizeTransactions', () => {
     ]
     const results = await categorizeTransactions(txns, 'test-key')
     expect(results).toHaveLength(2)
+    // Known merchants are pre-classified without an API call
     expect(results.find((r) => r.id === 'tx-1')?.category).toBe('Dining')
     expect(results.find((r) => r.id === 'tx-2')?.category).toBe('Groceries')
+    // No API calls — both merchants matched the static lookup
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('falls back to Claude API for unknown merchants', async () => {
+    const mockCreate = await getMockCreate()
+    mockCreate.mockResolvedValue(mockResponse([
+      { id: 'tx-1', category: 'Dining', subcategory: 'Restaurant' },
+    ]))
+
+    const txns = [makeTx({ id: 'tx-1', description: 'JOES CRAB SHACK 9876' })]
+    const results = await categorizeTransactions(txns, 'test-key')
+    expect(results).toHaveLength(1)
+    expect(results[0].category).toBe('Dining')
+    expect(mockCreate).toHaveBeenCalledTimes(1)
   })
 
   it('skips API for cache hits and only calls for misses', async () => {
-    // Pre-populate cache for tx-1
-    setCached('STARBUCKS', 50, 'debit', 'simple', { category: 'Dining', subcategory: 'Coffee Shop' })
+    // Use unknown merchants so they bypass the merchant pre-classifier
+    setCached('OBSCURE CAFE 1234', 50, 'debit', 'simple', { category: 'Dining', subcategory: 'Coffee Shop' })
 
     const mockCreate = await getMockCreate()
     mockCreate.mockResolvedValue(mockResponse([
@@ -75,8 +91,8 @@ describe('categorizeTransactions', () => {
     ]))
 
     const txns = [
-      makeTx({ id: 'tx-1', description: 'STARBUCKS' }),
-      makeTx({ id: 'tx-2', description: 'WHOLE FOODS' }),
+      makeTx({ id: 'tx-1', description: 'OBSCURE CAFE 1234' }),
+      makeTx({ id: 'tx-2', description: 'BOBS FARM STAND' }),
     ]
     const results = await categorizeTransactions(txns, 'test-key')
 
@@ -172,16 +188,15 @@ describe('categorizeTransactions', () => {
 
   it('uses mode as cache key discriminator — simple and detailed cache separately', async () => {
     const mockCreate = await getMockCreate()
-    // First call: simple mode
+    // Use unknown merchant so it bypasses pre-classifier and reaches API
     mockCreate.mockResolvedValueOnce(mockResponse([
       { id: 'tx-1', category: 'Dining', subcategory: 'Coffee' },
     ]))
-    // Second call: detailed mode (different subcategory)
     mockCreate.mockResolvedValueOnce(mockResponse([
       { id: 'tx-1', category: 'Dining', subcategory: 'Coffee Shop' },
     ]))
 
-    const txns = [makeTx({ id: 'tx-1', description: 'STARBUCKS', amount: 5 })]
+    const txns = [makeTx({ id: 'tx-1', description: 'OBSCURE CAFE 1234', amount: 5 })]
 
     const simpleResults = await categorizeTransactions(txns, 'test-key', undefined, undefined, 'simple')
     const detailedResults = await categorizeTransactions(txns, 'test-key', undefined, undefined, 'detailed')
@@ -284,7 +299,7 @@ describe('categorizeTransactions — detailed mode subcategory enforcement', () 
       { id: 'tx-1', category: 'Dining', subcategory: 'Coffee Shop' },
     ]))
 
-    const txns = [makeTx({ id: 'tx-1', description: 'STARBUCKS', amount: 5 })]
+    const txns = [makeTx({ id: 'tx-1', description: 'OBSCURE CAFE 1234', amount: 5 })]
     await categorizeTransactions(txns, 'test-key', undefined, undefined, 'simple')
 
     const callArgs = mockCreate.mock.calls[0][0] as { system: string }
