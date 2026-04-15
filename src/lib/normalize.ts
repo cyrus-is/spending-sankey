@@ -38,7 +38,7 @@ const MERCHANT_MAP: [RegExp, string][] = [
   [/comcast/i, 'Comcast'],
   [/tesco/i, 'Tesco'],
   [/sainsbury/i, "Sainsbury's"],
-  [/marks\s*&\s*spencer|marks\s*and\s*spencer|m&s\s*simply/i, 'Marks & Spencer'],
+  [/marks\s*&\s*spencer|marks\s*and\s*spencer|\bm&s\b/i, 'Marks & Spencer'],
   [/waitrose/i, 'Waitrose'],
   [/asda/i, 'ASDA'],
   [/ocado/i, 'Ocado'],
@@ -66,9 +66,26 @@ export function normalizeVendorName(description: string): string {
   return s.length > 28 ? s.substring(0, 28) + '…' : s
 }
 
-/** Return true if the description matches a known retail/merchant in the MERCHANT_MAP. */
-export function isKnownMerchant(description: string): boolean {
-  return MERCHANT_MAP.some(([pattern]) => pattern.test(description))
+/**
+ * Return true if the description looks like a merchant/vendor credit rather than income.
+ * Used by budget generation to exclude retail refunds, restaurant credits, etc. that
+ * banks may label as a non-expense category when the real category is a purchase reversal.
+ */
+
+// Patterns beyond MERCHANT_MAP — generic vendor-type words that can't be income.
+const VENDOR_INDICATOR_PATTERNS: RegExp[] = [
+  /\brestaurant\b/i,
+  /\bcafe\b|\bcoffee\s*shop\b|\bcoffee\s*house\b/i,
+  /\bpub\b|\btavern\b|\bbar\b/i,
+  /\bsupermarket\b|\bgrocery\b|\bgroceries\b/i,
+  /\bpharmacy\b|\bchemist\b/i,
+  /\bretail\b|\boutlet\b|\bshop\b(?!\s*\w+\s+payment)/i,
+  /\bdeli\b|\bbakery\b|\bbutcher\b/i,
+]
+
+export function isMerchantCredit(description: string): boolean {
+  if (MERCHANT_MAP.some(([pattern]) => pattern.test(description))) return true
+  return VENDOR_INDICATOR_PATTERNS.some((pattern) => pattern.test(description))
 }
 
 /** Normalize an income source description to a clean label. */

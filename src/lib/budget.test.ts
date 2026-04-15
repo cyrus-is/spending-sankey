@@ -87,11 +87,18 @@ describe('generateBudget', () => {
       makeTx({ description: 'AMAZON.COM', amount: 30, type: 'credit', category: 'Income', date: new Date('2024-01-18') }),
       // Tesco credit — supermarket return, should NOT appear as income
       makeTx({ description: 'TESCO STORES', amount: 12, type: 'credit', category: 'Income', date: new Date('2024-01-19') }),
+      // Generic "Restaurant" description (UK bank clean names) — not income
+      makeTx({ description: 'Restaurant', amount: 16, type: 'credit', category: 'Income', date: new Date('2024-01-20') }),
+      // M&S alone (UK bank abbreviation) — not income
+      makeTx({ description: 'M&S', amount: 10, type: 'credit', category: 'Income', date: new Date('2024-01-21') }),
     ]
     const budget = generateBudget(txns, { start: '2024-01-01', end: '2024-01-31' })
     const incomeSources = budget.income.map((l) => l.category)
     expect(incomeSources).not.toContain('Amazon')
     expect(incomeSources).not.toContain('Tesco')
+    expect(incomeSources).not.toContain('Restaurant')
+    expect(incomeSources).not.toContain('M&S')
+    expect(incomeSources).not.toContain('Marks & Spencer')
     // Salary still present
     expect(incomeSources).toContain('Salary')
   })

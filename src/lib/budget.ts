@@ -6,7 +6,7 @@ import type {
   BudgetComparisonResult,
 } from './budget-types'
 import { detectRecurring } from './recurring'
-import { normalizeVendorName, normalizeSource, isKnownMerchant } from './normalize'
+import { normalizeVendorName, normalizeSource, isMerchantCredit } from './normalize'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -100,7 +100,7 @@ export function generateBudget(
     // Skip refunds and peer transfers
     if (NON_INCOME_SOURCES.has(source)) continue
     // Skip credits from known retail merchants — these are returns/credits, not income
-    if (isKnownMerchant(tx.description)) continue
+    if (isMerchantCredit(tx.description)) continue
     if (!incomeBySource.has(source)) incomeBySource.set(source, [])
     incomeBySource.get(source)!.push(tx.amount)
   }
@@ -278,7 +278,7 @@ export function compareBudgetToActual(
     if (EXPENSE_CATEGORIES.has(tx.category) || tx.category === 'Transfer') continue
     const source = normalizeSource(tx.description)
     if (NON_INCOME_SOURCES.has(source)) continue
-    if (isKnownMerchant(tx.description)) continue
+    if (isMerchantCredit(tx.description)) continue
     actualIncomeBySource.set(source, (actualIncomeBySource.get(source) ?? 0) + tx.amount)
   }
 
