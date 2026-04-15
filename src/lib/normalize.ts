@@ -52,7 +52,7 @@ const MERCHANT_MAP: [RegExp, string][] = [
 
 /** Normalize a vendor description to a clean, groupable name. */
 export function normalizeVendorName(description: string): string {
-  let s = description
+  const s = description
     .replace(/\*[A-Z0-9]+$/i, '')   // strip trailing order IDs like *8N3LQ7PK5
     .replace(/#\d+/g, '')           // strip store numbers like #123
     .replace(/\s{2,}/g, ' ')

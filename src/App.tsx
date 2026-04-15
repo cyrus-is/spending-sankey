@@ -87,7 +87,7 @@ export function App() {
     return allTransactions.filter(
       (tx) => tx.date.getTime() >= start && tx.date.getTime() <= end,
     )
-  }, [allTransactions, overrides, dateRange])
+  }, [allTransactions, dateRange])
 
   // Check for categorized transactions (any with non-default category from Claude)
   const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
@@ -338,7 +338,7 @@ export function App() {
       }
     }
     return result
-  }, [activeLens, taxResults, taxOverrides, filteredTransactions])
+  }, [activeLens, taxResults, taxOverrides, filteredTransactions, overrides])
 
   const budgetComparison = useMemo(() => {
     if (!budget || !hasCategorized || filteredTransactions.length === 0) return null

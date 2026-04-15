@@ -61,6 +61,7 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
     if (overflowBottom > 0) {
       setTooltip((prev) => prev && { ...prev, y: prev.y - overflowBottom - 4 })
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on specific fields to avoid infinite loop (setTooltip inside effect)
   }, [tooltip?.label, tooltip?.x, tooltip?.y])
 
   useEffect(() => {
