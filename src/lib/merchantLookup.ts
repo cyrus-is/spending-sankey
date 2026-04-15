@@ -727,6 +727,41 @@ const CHILDCARE: MerchantRule[] = [
   { name: 'Summer Camp (generic)', pattern: /\bSUMMER\s*CAMP\b/i,                              category: 'Childcare', subcategory: 'Summer Camp' },
 ]
 
+const EDUCATION: MerchantRule[] = [
+  // --- Student Loans ---
+  { name: 'Navient',               pattern: /\bNAVIENT\b/i,                                   category: 'Education', subcategory: 'Student Loan' },
+  { name: 'Nelnet',                pattern: /\bNELNET\b/i,                                    category: 'Education', subcategory: 'Student Loan' },
+  { name: 'Great Lakes',           pattern: /GREAT\s*LAKES.*(?:LOAN|EDUC)/i,                   category: 'Education', subcategory: 'Student Loan' },
+  { name: 'FedLoan / MOHELA',     pattern: /\bFEDLOAN\b|\bMOHELA\b/i,                         category: 'Education', subcategory: 'Student Loan' },
+  { name: 'SoFi Student Loan',    pattern: /SOFI.*(?:STUDENT|LOAN|EDU)/i,                      category: 'Education', subcategory: 'Student Loan' },
+  { name: 'Student Loan (generic)', pattern: /STUDENT\s*LOAN/i,                                category: 'Education', subcategory: 'Student Loan' },
+
+  // --- Tutoring ---
+  { name: 'Kumon',                 pattern: /\bKUMON\b/i,                                     category: 'Education', subcategory: 'Tutoring' },
+  { name: 'Sylvan Learning',      pattern: /SYLVAN\s*LEARN/i,                                  category: 'Education', subcategory: 'Tutoring' },
+  { name: 'Mathnasium',           pattern: /\bMATHNASIUM\b/i,                                  category: 'Education', subcategory: 'Tutoring' },
+  { name: 'Wyzant',               pattern: /\bWYZANT\b/i,                                     category: 'Education', subcategory: 'Tutoring' },
+  { name: 'Varsity Tutors',       pattern: /VARSITY\s*TUTOR/i,                                 category: 'Education', subcategory: 'Tutoring' },
+
+  // --- Online Learning ---
+  { name: 'Coursera',             pattern: /\bCOURSERA\b/i,                                   category: 'Education', subcategory: 'Online Course' },
+  { name: 'Udemy',                pattern: /\bUDEMY\b/i,                                      category: 'Education', subcategory: 'Online Course' },
+  { name: 'Skillshare',           pattern: /\bSKILLSHARE\b/i,                                 category: 'Education', subcategory: 'Online Course' },
+  { name: 'LinkedIn Learning',    pattern: /LINKEDIN\s*LEARN/i,                                category: 'Education', subcategory: 'Online Course' },
+  { name: 'MasterClass',          pattern: /\bMASTERCLASS\b|MASTER\s*CLASS/i,                  category: 'Education', subcategory: 'Online Course' },
+  { name: 'Brilliant',            pattern: /\bBRILLIANT\.ORG\b/i,                             category: 'Education', subcategory: 'Online Course' },
+  { name: 'Khan Academy',         pattern: /KHAN\s*ACADEMY/i,                                  category: 'Education', subcategory: 'Online Course' },
+
+  // --- Test Prep ---
+  { name: 'Kaplan',               pattern: /\bKAPLAN\b.*(?:TEST|PREP|EDU)?/i,                  category: 'Education', subcategory: 'Test Prep' },
+  { name: 'Princeton Review',     pattern: /PRINCETON\s*REVIEW/i,                              category: 'Education', subcategory: 'Test Prep' },
+  { name: 'College Board',        pattern: /COLLEGE\s*BOARD|COLLEGEBOARD/i,                    category: 'Education', subcategory: 'Test Prep' },
+  { name: 'ACT Inc',              pattern: /\bACT\s*INC\b/i,                                  category: 'Education', subcategory: 'Test Prep' },
+
+  // --- Generic patterns ---
+  { name: 'Tuition (generic)',    pattern: /\bTUITION\b/i,                                    category: 'Education', subcategory: 'Tuition' },
+]
+
 // ---------------------------------------------------------------------------
 // Consolidated rule list — ORDER MATTERS (first match wins)
 // ---------------------------------------------------------------------------
@@ -753,6 +788,8 @@ export const ALL_RULES: MerchantRule[] = [
   ...ENTERTAINMENT,
   // Childcare — specific chain names, won't conflict
   ...CHILDCARE,
+  // Education — student loans, tutoring, online learning
+  ...EDUCATION,
   // Health
   ...HEALTH,
   // Travel

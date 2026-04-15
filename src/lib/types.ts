@@ -24,6 +24,7 @@ export type Category =
   | 'Income'
   | 'Housing'
   | 'Childcare'
+  | 'Education'
   | 'Groceries'
   | 'Dining'
   | 'Transport'
@@ -39,6 +40,7 @@ export const CATEGORIES: Category[] = [
   'Income',
   'Housing',
   'Childcare',
+  'Education',
   'Groceries',
   'Dining',
   'Transport',

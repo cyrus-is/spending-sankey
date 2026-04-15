@@ -423,9 +423,22 @@ describe('rule coverage', () => {
     expect(classifyByMerchant('MONTESSORI ACADEMY')?.category).toBe('Childcare')
   })
 
+  it('classifies education merchants', () => {
+    expect(classifyByMerchant('NAVIENT STUDENT LOAN')?.category).toBe('Education')
+    expect(classifyByMerchant('NELNET PAYMENT')?.category).toBe('Education')
+    expect(classifyByMerchant('KUMON MATH CENTER')?.category).toBe('Education')
+    expect(classifyByMerchant('COURSERA INC')?.category).toBe('Education')
+    expect(classifyByMerchant('UDEMY ONLINE COURSE')?.category).toBe('Education')
+    expect(classifyByMerchant('KAPLAN TEST PREP')?.category).toBe('Education')
+    expect(classifyByMerchant('COLLEGE BOARD SAT')?.category).toBe('Education')
+    expect(classifyByMerchant('TUITION PAYMENT')?.category).toBe('Education')
+    expect(classifyByMerchant('PRINCETON REVIEW')?.category).toBe('Education')
+    expect(classifyByMerchant('MOHELA STUDENT')?.category).toBe('Education')
+  })
+
   it('all rules have valid categories', () => {
     const validCategories = new Set([
-      'Income', 'Housing', 'Childcare', 'Groceries', 'Dining', 'Transport', 'Travel',
+      'Income', 'Housing', 'Childcare', 'Education', 'Groceries', 'Dining', 'Transport', 'Travel',
       'Shopping', 'Entertainment', 'Health', 'Subscriptions', 'Transfer', 'Other',
     ])
     for (const rule of ALL_RULES) {

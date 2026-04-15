@@ -17,6 +17,7 @@ interface CategorizationResult {
 export const SUBCATEGORY_TAXONOMY: Record<string, string[]> = {
   Housing:       ['Rent/Mortgage', 'Utilities', 'Internet/Cable', 'Phone Bill', 'Insurance'],
   Childcare:     ['Daycare', 'Preschool', 'After School', 'Summer Camp', 'Nanny/Babysitter'],
+  Education:     ['Tuition', 'Student Loan', 'Tutoring', 'Online Course', 'Test Prep'],
   Groceries:     ['Supermarket', 'Warehouse Club', 'Grocery Delivery', 'Specialty Food'],
   Dining:        ['Restaurant', 'Coffee Shop', 'Food Delivery', 'Fast Food', 'Bar'],
   Transport:     ['Gas Station', 'Rideshare', 'Parking', 'Public Transit', 'Auto Insurance'],
@@ -36,6 +37,7 @@ For each transaction, assign EXACTLY one of these category strings (use the exac
 - Income
 - Housing
 - Childcare
+- Education
 - Groceries
 - Dining
 - Transport
@@ -51,6 +53,7 @@ Category rules:
 - Income: salary, payroll, direct deposits, interest earned, tax refunds, side job payments, freelance deposits
 - Housing: rent, mortgage, utilities (electric, gas, water), internet/cable, renters/home insurance, phone bill (AT&T, Comcast)
 - Childcare: daycare centers (Bright Horizons, KinderCare, Goddard School, Primrose), preschools, after-school programs, summer camps, nanny/babysitter payments, au pair agencies
+- Education: private school tuition, college tuition, student loan payments (Navient, Nelnet), tutoring (Kumon, Sylvan, Wyzant), online courses (Coursera, Udemy), test prep (Kaplan, Princeton Review), 529 plan contributions
 - Groceries: supermarkets and warehouse stores for food (Whole Foods, Trader Joe's, Costco, Sainsbury's, Tesco, M&S Food, Instacart delivery)
 - Dining: restaurants, coffee shops (Starbucks, Blue Bottle, Costa, Pret A Manger), food delivery apps (DoorDash, GrubHub, Uber Eats, Deliveroo), fast food (Chipotle, McDonald's), Sweetgreen
 - Transport: gas stations (Shell, Costco Gas), parking, rideshare trips (Uber trip, Lyft), public transit (Oyster/TfL), auto insurance, car payments
@@ -84,6 +87,7 @@ For each transaction, assign EXACTLY one category AND one subcategory from the l
 
 Housing:       Rent/Mortgage | Utilities | Internet/Cable | Phone Bill | Insurance
 Childcare:     Daycare | Preschool | After School | Summer Camp | Nanny/Babysitter
+Education:     Tuition | Student Loan | Tutoring | Online Course | Test Prep
 Groceries:     Supermarket | Warehouse Club | Grocery Delivery | Specialty Food
 Dining:        Restaurant | Coffee Shop | Food Delivery | Fast Food | Bar
 Transport:     Gas Station | Rideshare | Parking | Public Transit | Auto Insurance
@@ -100,6 +104,7 @@ Category rules:
 - Income: salary, payroll, direct deposits, interest earned, tax refunds, side job payments, freelance deposits
 - Housing: rent, mortgage, utilities (electric, gas, water), internet/cable, renters/home insurance, phone bill (AT&T, Comcast)
 - Childcare: daycare centers (Bright Horizons, KinderCare, Goddard School, Primrose), preschools, after-school programs, summer camps, nanny/babysitter payments, au pair agencies
+- Education: private school tuition, college tuition, student loan payments (Navient, Nelnet), tutoring (Kumon, Sylvan, Wyzant), online courses (Coursera, Udemy), test prep (Kaplan, Princeton Review), 529 plan contributions
 - Groceries: supermarkets and warehouse stores for food (Whole Foods, Trader Joe's, Costco, Sainsbury's, Tesco, M&S Food, Instacart delivery)
 - Dining: restaurants, coffee shops (Starbucks, Blue Bottle, Costa, Pret A Manger), food delivery apps (DoorDash, GrubHub, Uber Eats, Deliveroo), fast food (Chipotle, McDonald's), Sweetgreen
 - Transport: gas stations (Shell, Costco Gas), parking, rideshare trips (Uber trip, Lyft), public transit (Oyster/TfL), auto insurance, car payments
@@ -175,6 +180,11 @@ const CATEGORY_ALIASES: Record<string, string> = {
   preschool: 'Childcare', 'pre-school': 'Childcare', 'after school': 'Childcare',
   'summer camp': 'Childcare', nanny: 'Childcare', babysitter: 'Childcare',
   'dependent care': 'Childcare',
+  // Education
+  education: 'Education', tuition: 'Education', 'school tuition': 'Education',
+  'student loan': 'Education', 'student loans': 'Education',
+  tutoring: 'Education', 'online course': 'Education', 'online learning': 'Education',
+  'test prep': 'Education', university: 'Education', college: 'Education',
   // Housing
   housing: 'Housing', rent: 'Housing', mortgage: 'Housing',
   utilities: 'Housing', utility: 'Housing', insurance: 'Housing',
