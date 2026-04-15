@@ -8,7 +8,6 @@ export interface Transaction {
   category: string
   subcategory: string
   sourceFile: string
-  rawRow: Record<string, string>
 }
 
 /** A CSV file that has been loaded and parsed into raw rows */

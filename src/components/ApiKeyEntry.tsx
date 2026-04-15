@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { storeApiKey } from '../lib/apiKey'
+import { storeApiKey, isKeyRemembered } from '../lib/apiKey'
 
 interface ApiKeyEntryProps {
   onKey: (key: string) => void
@@ -10,18 +10,19 @@ interface ApiKeyEntryProps {
 export function ApiKeyEntry({ onKey, hasKey }: ApiKeyEntryProps) {
   const [input, setInput] = useState('')
   const [visible, setVisible] = useState(false)
+  const [remember, setRemember] = useState(isKeyRemembered)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     const trimmed = input.trim()
     if (!trimmed) return
-    storeApiKey(trimmed)
+    storeApiKey(trimmed, remember)
     onKey(trimmed)
     setInput('')
   }
 
   const handleClear = () => {
-    storeApiKey('')
+    storeApiKey('', false)
     onKey('')
   }
 
@@ -42,7 +43,7 @@ export function ApiKeyEntry({ onKey, hasKey }: ApiKeyEntryProps) {
       <label htmlFor="api-key-input" className="api-key-form__label">
         Claude API key{' '}
         <span className="api-key-form__hint">
-          (stored in sessionStorage, never sent to our servers)
+          (never sent to our servers — your browser calls Claude directly)
         </span>
       </label>
       <div className="api-key-form__row">
@@ -68,6 +69,14 @@ export function ApiKeyEntry({ onKey, hasKey }: ApiKeyEntryProps) {
           Save
         </button>
       </div>
+      <label className="api-key-form__remember">
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
+        />
+        Remember my key
+      </label>
     </form>
   )
 }

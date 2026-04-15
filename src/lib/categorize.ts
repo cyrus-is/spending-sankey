@@ -198,8 +198,7 @@ function parseBatchResponse(text: string, requestedIds: string[], mode = 'simple
     throw new Error('Claude returned an empty response for a categorization batch.')
   }
 
-  // DEBUG: log raw response for first batch to diagnose categorization issues
-  if (requestedIds[0]) {
+  if (import.meta.env.DEV && requestedIds[0]) {
     console.debug('[categorize] raw response (first 500 chars):', text.substring(0, 500))
   }
 
@@ -256,10 +255,11 @@ function parseBatchResponse(text: string, requestedIds: string[], mode = 'simple
     })
   }
 
-  // DEBUG: log category distribution for this batch
-  const dist: Record<string, number> = {}
-  for (const r of results) dist[r.category] = (dist[r.category] ?? 0) + 1
-  console.debug('[categorize] batch category distribution:', dist)
+  if (import.meta.env.DEV) {
+    const dist: Record<string, number> = {}
+    for (const r of results) dist[r.category] = (dist[r.category] ?? 0) + 1
+    console.debug('[categorize] batch category distribution:', dist)
+  }
 
   // Warn about missing IDs — fill them in as 'Other' so no transaction is silently dropped
   for (const id of requestedIds) {

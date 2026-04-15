@@ -15,7 +15,7 @@ import { mapToEssentialsBucket } from './lib/lenses/essentials'
 import { taxCategorize } from './lib/lenses/tax-us'
 import { TaxFlagPanel } from './components/TaxFlagPanel'
 import { exportTaxCSV } from './lib/lenses/export'
-import { getStoredApiKey, storeApiKey } from './lib/apiKey'
+import { getStoredApiKey } from './lib/apiKey'
 import { readCsvFile } from './lib/readCsv'
 import { detectFormat, parseTransactions } from './lib/parser'
 import { categorizeTransactions } from './lib/categorize'
@@ -97,7 +97,6 @@ export function App() {
 
   const handleApiKey = useCallback((key: string) => {
     setApiKey(key)
-    storeApiKey(key)
   }, [])
 
   const handleFiles = useCallback(async (newFiles: File[]) => {

@@ -15,7 +15,6 @@ function makeTx(id: string, description = 'TEST MERCHANT'): Transaction {
     category: 'Shopping',
     subcategory: '',
     sourceFile: 'test.csv',
-    rawRow: {},
   }
 }
 

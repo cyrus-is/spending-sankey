@@ -233,7 +233,6 @@ export function parseTransactions(
       category: type === 'credit' ? 'Income' : 'Other',
       subcategory: '',
       sourceFile,
-      rawRow: row,
     })
   }
 

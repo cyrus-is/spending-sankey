@@ -12,7 +12,6 @@ function makeTx(overrides: Partial<Transaction>): Transaction {
     category: 'Dining',
     subcategory: 'Restaurant',
     sourceFile: 'test.csv',
-    rawRow: {},
     ...overrides,
   }
 }

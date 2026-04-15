@@ -337,6 +337,24 @@ body {
   background: #2b6cb0;
 }
 
+.api-key-form__remember {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #a0aec0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.api-key-form__remember input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #63b3ed;
+  cursor: pointer;
+}
+
 .api-key-status {
   display: flex;
   align-items: center;
