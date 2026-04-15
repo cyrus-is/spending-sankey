@@ -103,8 +103,7 @@ describe('detectRecurring', () => {
     // Quarterly software subscription: 90-day intervals
     const txns = monthlyTxns('ADOBE INC', 'Subscriptions', 54.99, 4, new Date('2024-01-01'), 91)
     const results = detectRecurring(txns)
-    const r = results.find((r) => r.merchant === 'ADOBE INC'.substring(0, 28))
-    // Adobe is not in the merchant map, so it's normalized by length
+    // Adobe is not in the merchant map, so it's normalized by truncation
     expect(results.length).toBeGreaterThan(0)
     expect(results[0].cadence).toBe('quarterly')
     expect(results[0].type).toBe('fixed')
