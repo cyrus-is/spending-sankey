@@ -1,4 +1,5 @@
 import type { Transaction } from './types'
+import { EXPENSE_CATEGORIES } from './types'
 import { normalizeVendorName, normalizeSource } from './normalize'
 
 export interface VendorTotal {
@@ -72,12 +73,7 @@ export function buildSankeyData(
   // Filter out transfers
   const nonTransfer = txns.filter((tx) => tx.category !== 'Transfer')
 
-  // Categories that, when assigned to a credit transaction, signal a refund/return
-  // rather than true income. Claude assigns these when it recognises the merchant.
-  const EXPENSE_CATEGORIES = new Set([
-    'Groceries', 'Dining', 'Housing', 'Childcare', 'Education', 'Transport', 'Travel',
-    'Shopping', 'Entertainment', 'Health', 'Subscriptions',
-  ])
+  // EXPENSE_CATEGORIES imported from types.ts — credits with an expense category are refunds
 
   // Separate income and expenses; credits with an expense category are refunds
   const refundTransactions = nonTransfer.filter(

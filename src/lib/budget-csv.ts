@@ -1,6 +1,6 @@
 import type { Budget, BudgetLine, BudgetLineType } from './budget-types'
 
-const FORMAT_VERSION = '1'
+const FORMAT_VERSION = '2'
 
 // ── Build ──────────────────────────────────────────────────────────────────
 
@@ -14,12 +14,11 @@ export function buildBudgetCSV(budget: Budget): string {
   lines.push(`# Source data: ${budget.sourceRange.start} to ${budget.sourceRange.end}`)
   lines.push(`# Version: ${FORMAT_VERSION}`)
 
-  // Column header
-  lines.push('Section,Category,Type,Monthly Amount,Notes')
+  // Column header — Merchant column preserves merchant-level lines on round-trip
+  lines.push('Section,Category,Merchant,Type,Monthly Amount,Notes')
 
   function row(section: string, line: BudgetLine): string {
-    const category = line.merchant ?? line.category
-    const cells = [section, category, line.type, line.amount.toFixed(2), line.notes]
+    const cells = [section, line.category, line.merchant ?? '', line.type, line.amount.toFixed(2), line.notes]
     return cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
   }
 
@@ -92,6 +91,7 @@ export function parseBudgetCSV(csv: string): Budget {
   const header = parseCSVRow(dataLines[0])
   const sectionIdx = header.indexOf('Section')
   const categoryIdx = header.indexOf('Category')
+  const merchantIdx = header.indexOf('Merchant')   // v2+ only; -1 for v1 files
   const typeIdx = header.indexOf('Type')
   const amountIdx = header.indexOf('Monthly Amount')
   const notesIdx = header.indexOf('Notes')
@@ -112,6 +112,7 @@ export function parseBudgetCSV(csv: string): Budget {
 
     const section = row[sectionIdx] ?? ''
     const category = row[categoryIdx] ?? ''
+    const merchantRaw = merchantIdx >= 0 ? (row[merchantIdx] ?? '') : ''
     const typeRaw = row[typeIdx] ?? ''
     const amountRaw = row[amountIdx] ?? '0'
     const notes = notesIdx >= 0 ? (row[notesIdx] ?? '') : ''
@@ -129,6 +130,7 @@ export function parseBudgetCSV(csv: string): Budget {
 
     const line: BudgetLine = {
       category,
+      ...(merchantRaw ? { merchant: merchantRaw } : {}),
       type: typeRaw as BudgetLineType,
       amount: Math.round(amount * 100) / 100,
       notes,

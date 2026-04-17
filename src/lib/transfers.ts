@@ -39,22 +39,37 @@ export function detectTransfers(transactions: Transaction[]): Set<string> {
     }
   }
 
-  // Phase 2: amount matching across files (same amount ± 1%, within 3 days, different files)
+  // Phase 2: amount matching across files (same amount ± 1%, within 3 days, different files).
+  // Uses a bucket Map keyed by rounded-cent amount to avoid O(n²) comparisons.
   const sourceFiles = new Set(transactions.map((tx) => tx.sourceFile))
   if (sourceFiles.size > 1) {
     const debits = transactions.filter((tx) => tx.type === 'debit' && !transferIds.has(tx.id))
     const credits = transactions.filter((tx) => tx.type === 'credit' && !transferIds.has(tx.id))
 
+    // Index credits by their amount in cents (rounded) for fast lookup
+    const creditsByAmount = new Map<number, typeof credits>()
+    for (const credit of credits) {
+      const key = Math.round(credit.amount * 100)
+      const bucket = creditsByAmount.get(key)
+      if (bucket) bucket.push(credit)
+      else creditsByAmount.set(key, [credit])
+    }
+
     for (const debit of debits) {
-      for (const credit of credits) {
-        if (debit.sourceFile === credit.sourceFile) continue
-
-        const amountDiff = Math.abs(debit.amount - credit.amount) / debit.amount
-        const daysDiff = Math.abs(debit.date.getTime() - credit.date.getTime()) / 86400000
-
-        if (amountDiff <= 0.01 && daysDiff <= 3) {
-          transferIds.add(debit.id)
-          transferIds.add(credit.id)
+      const centKey = Math.round(debit.amount * 100)
+      // Check buckets within ±1% — that's at most a few cent-keys above/below
+      const spread = Math.ceil(centKey * 0.01) + 1
+      for (let k = centKey - spread; k <= centKey + spread; k++) {
+        const candidates = creditsByAmount.get(k)
+        if (!candidates) continue
+        for (const credit of candidates) {
+          if (debit.sourceFile === credit.sourceFile) continue
+          const amountDiff = Math.abs(debit.amount - credit.amount) / debit.amount
+          const daysDiff = Math.abs(debit.date.getTime() - credit.date.getTime()) / 86400000
+          if (amountDiff <= 0.01 && daysDiff <= 3) {
+            transferIds.add(debit.id)
+            transferIds.add(credit.id)
+          }
         }
       }
     }

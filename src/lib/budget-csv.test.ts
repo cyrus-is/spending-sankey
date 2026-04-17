@@ -30,21 +30,22 @@ describe('buildBudgetCSV', () => {
     expect(csv).toContain('# Spending Sankey Budget Export')
     expect(csv).toContain('# Generated: 2024-04-01')
     expect(csv).toContain('# Source data: 2024-01-01 to 2024-03-31')
-    expect(csv).toContain('# Version: 1')
+    expect(csv).toContain('# Version: 2')
   })
 
   it('includes a header row with correct columns', () => {
     const csv = buildBudgetCSV(makeBudget())
-    expect(csv).toContain('Section,Category,Type,Monthly Amount,Notes')
+    expect(csv).toContain('Section,Category,Merchant,Type,Monthly Amount,Notes')
   })
 
-  it('uses merchant name instead of category for merchant-specific lines', () => {
+  it('writes merchant in the Merchant column and category in the Category column', () => {
     const csv = buildBudgetCSV(makeBudget())
-    expect(csv).toContain('"Netflix"')
-    // Should not contain the category field "Subscriptions" as the Category cell for that row
     const lines = csv.split('\n')
     const netflixLine = lines.find((l) => l.includes('"Netflix"'))
     expect(netflixLine).toBeDefined()
+    // Category column should be the parent category, Merchant column should be "Netflix"
+    expect(netflixLine).toContain('"Subscriptions"')
+    expect(netflixLine).toContain('"Netflix"')
     expect(netflixLine).toContain('"fixed"')
     expect(netflixLine).toContain('"15.99"')
     expect(netflixLine).toContain('"Streaming"')
@@ -89,9 +90,9 @@ describe('parseBudgetCSV', () => {
     expect(parsed.income[0].type).toBe('fixed')
     expect(parsed.income[0].amount).toBe(5000)
 
-    // Check expense lines
-    // Netflix uses merchant name as category in CSV
-    expect(parsed.expenses[0].category).toBe('Netflix')
+    // Check expense lines — merchant field round-trips correctly
+    expect(parsed.expenses[0].category).toBe('Subscriptions')
+    expect(parsed.expenses[0].merchant).toBe('Netflix')
     expect(parsed.expenses[0].type).toBe('fixed')
     expect(parsed.expenses[0].amount).toBe(15.99)
     expect(parsed.expenses[0].notes).toBe('Streaming')
@@ -157,7 +158,8 @@ describe('parseBudgetCSV', () => {
   })
 
   it('handles extra whitespace in unquoted cells gracefully', () => {
-    const csv = 'Section,Category,Type,Monthly Amount,Notes\nIncome , Salary , fixed , 1000 , '
+    // v2 format with Merchant column
+    const csv = 'Section,Category,Merchant,Type,Monthly Amount,Notes\nIncome , Salary , , fixed , 1000 , '
     const parsed = parseBudgetCSV(csv)
     expect(parsed.income[0].category).toBe('Salary')
     expect(parsed.income[0].amount).toBe(1000)

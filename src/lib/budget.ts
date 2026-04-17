@@ -1,4 +1,5 @@
 import type { Transaction } from './types'
+import { EXPENSE_CATEGORIES } from './types'
 import type {
   Budget,
   BudgetLine,
@@ -63,12 +64,7 @@ function monthlyTotals(transactions: Transaction[]): Map<string, number> {
   return byMonth
 }
 
-// ── EXPENSE CATEGORIES that can appear on the spending side (not income) ──
-
-const EXPENSE_CATEGORIES = new Set([
-  'Groceries', 'Dining', 'Housing', 'Childcare', 'Education', 'Transport', 'Travel',
-  'Shopping', 'Entertainment', 'Health', 'Subscriptions', 'Other',
-])
+// EXPENSE_CATEGORIES imported from types.ts
 
 // ── Main: budget generation ────────────────────────────────────────────────
 

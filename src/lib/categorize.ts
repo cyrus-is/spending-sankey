@@ -352,7 +352,7 @@ export async function categorizeTransactions(
 
   const runBatch = async (batch: Transaction[]): Promise<CategorizationResult[]> => {
     if (signal?.aborted) throw new Error('Categorization cancelled.')
-    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type, amount: tx.amount }))
+    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, amount: tx.amount }))
     const requestedIds = batch.map((tx) => tx.id)
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',

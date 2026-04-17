@@ -37,6 +37,7 @@ Source: hq/projects/ideas/spending-sankey.md
 - [x] Budget persistence via localStorage (restored on page load)
 - [x] Budget overlay on Sankey (dashed ghost rects at budgeted height, red tint for over-budget)
 - [ ] Natural-language spending observations
+- [x] v2.0.0 — budget generation, comparison, CSV export/import, Sankey overlay
 - [ ] Gig economy lens (Uber/Lyft drivers, Airbnb hosts)
 - [ ] Business sub-tab within Tax lens (Schedule C personal/business toggle)
 - [ ] Hosted version
