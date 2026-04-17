@@ -138,14 +138,19 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
       })
 
     // Budget overlay ghost rects — drawn BEFORE nodes so they appear behind node rects.
-    // Use a single global scale derived from the largest expense node (least likely to have
-    // been min-clamped by d3-sankey's 1px floor) so all ghost rects are consistent.
+    // Scale derived as a weighted average (totalPx / totalValue) across non-min-clamped nodes.
+    // d3-sankey floors node height at 1px, so clamped nodes give a false px-per-dollar ratio;
+    // we exclude any node whose rendered height is ≤ 1px to avoid contaminating the scale.
     if (budgetOverlay) {
       const expenseNodes = nodes.filter((d) => d.id.startsWith('cat:') && (d.value ?? 0) > 0)
       if (expenseNodes.length > 0) {
-        const refNode = expenseNodes.reduce((a, b) => (a.value ?? 0) >= (b.value ?? 0) ? a : b)
-        const globalScale = ((refNode.y1 ?? 0) - (refNode.y0 ?? 0)) / (refNode.value ?? 1)
+        const reliableNodes = expenseNodes.filter((d) => ((d.y1 ?? 0) - (d.y0 ?? 0)) > 1)
+        const scaleNodes = reliableNodes.length > 0 ? reliableNodes : expenseNodes
+        const totalPx = scaleNodes.reduce((s, d) => s + ((d.y1 ?? 0) - (d.y0 ?? 0)), 0)
+        const totalVal = scaleNodes.reduce((s, d) => s + (d.value ?? 0), 0)
+        const globalScale = totalVal > 0 ? totalPx / totalVal : 0
 
+        if (globalScale === 0) return
         const overlayGroup = g.append('g').attr('class', 'budget-overlay')
         expenseNodes.forEach((d) => {
           const category = d.id.slice(4)
