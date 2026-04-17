@@ -133,6 +133,40 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
         return `${src.label} → ${tgt.label}\n$${d.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       })
 
+    // Budget overlay ghost rects — drawn BEFORE nodes so they appear behind node rects.
+    // Use a single global scale derived from the largest expense node (least likely to have
+    // been min-clamped by d3-sankey's 1px floor) so all ghost rects are consistent.
+    if (budgetOverlay) {
+      const expenseNodes = nodes.filter((d) => d.id.startsWith('cat:') && (d.value ?? 0) > 0)
+      if (expenseNodes.length > 0) {
+        const refNode = expenseNodes.reduce((a, b) => (a.value ?? 0) >= (b.value ?? 0) ? a : b)
+        const globalScale = ((refNode.y1 ?? 0) - (refNode.y0 ?? 0)) / (refNode.value ?? 1)
+
+        const overlayGroup = g.append('g').attr('class', 'budget-overlay')
+        expenseNodes.forEach((d) => {
+          const category = d.id.slice(4)
+          const budgeted = budgetOverlay[category]
+          if (budgeted === undefined || budgeted <= 0) return
+
+          const ghostHeight = Math.max(1, budgeted * globalScale)
+          const nodeWidth = (d.x1 ?? 0) - (d.x0 ?? 0)
+
+          overlayGroup
+            .append('rect')
+            .attr('x', d.x0 ?? 0)
+            .attr('y', d.y0 ?? 0)
+            .attr('width', nodeWidth)
+            .attr('height', ghostHeight)
+            .attr('fill', 'none')
+            .attr('stroke', '#e2e8f0')
+            .attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '4,3')
+            .attr('rx', 2)
+            .attr('opacity', 0.7)
+        })
+      }
+    }
+
     // Node rectangles
     const nodeGroup = g
       .append('g')
@@ -191,35 +225,6 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
         })
         return `${d.label} ${val}`
       })
-    // Budget overlay: dashed ghost rects showing budgeted amount on expense category nodes
-    if (budgetOverlay) {
-      const overlayNodes = nodes.filter((d) => d.id.startsWith('cat:'))
-      const overlayGroup = g.append('g').attr('class', 'budget-overlay')
-
-      overlayNodes.forEach((d) => {
-        const category = d.id.slice(4)
-        const budgeted = budgetOverlay[category]
-        if (budgeted === undefined || budgeted <= 0) return
-
-        const actualHeight = Math.max(1, (d.y1 ?? 0) - (d.y0 ?? 0))
-        const scale = actualHeight / (d.value ?? 1)
-        const ghostHeight = Math.max(1, budgeted * scale)
-        const nodeWidth = (d.x1 ?? 0) - (d.x0 ?? 0)
-
-        overlayGroup
-          .append('rect')
-          .attr('x', (d.x0 ?? 0))
-          .attr('y', (d.y0 ?? 0))
-          .attr('width', nodeWidth)
-          .attr('height', ghostHeight)
-          .attr('fill', 'none')
-          .attr('stroke', '#e2e8f0')
-          .attr('stroke-width', 1.5)
-          .attr('stroke-dasharray', '4,3')
-          .attr('rx', 2)
-          .attr('opacity', 0.6)
-      })
-    }
   }, [data, width, height, budgetOverlay])
 
   if (data.nodes.length === 0) return null

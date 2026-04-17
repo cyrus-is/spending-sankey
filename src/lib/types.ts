@@ -57,7 +57,8 @@ export const CATEGORIES: Category[] = [
  * All categories that represent spending (not income or transfers).
  * Used to distinguish refunds from income on the Sankey and to scope budget generation.
  */
-export const EXPENSE_CATEGORIES = new Set<Category>([
+// Typed as Set<string> so callers can use .has(tx.category) without casting
+export const EXPENSE_CATEGORIES: Set<string> = new Set<Category>([
   'Housing', 'Childcare', 'Education', 'Groceries', 'Dining',
   'Transport', 'Travel', 'Shopping', 'Entertainment', 'Health',
   'Subscriptions', 'Other',

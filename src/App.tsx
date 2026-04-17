@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DropZone } from './components/DropZone'
 import { RawTable } from './components/RawTable'
 import { ApiKeyEntry } from './components/ApiKeyEntry'
@@ -8,368 +8,112 @@ import { DateFilter } from './components/DateFilter'
 import type { DateRange } from './components/DateFilter'
 import { LensSwitcher } from './components/LensSwitcher'
 import { CategorizationModeSelector } from './components/CategorizationModeSelector'
-import type { CategorizationMode } from './components/CategorizationModeSelector'
-import type { LensId, TaxResult, TaxArea } from './lib/lenses/types'
-import { ESSENTIALS_BUCKETS, TAX_AREAS } from './lib/lenses/types'
-import { mapToEssentialsBucket } from './lib/lenses/essentials'
-import { taxCategorize } from './lib/lenses/tax-us'
 import { TaxFlagPanel } from './components/TaxFlagPanel'
+import { BudgetPanel } from './components/BudgetPanel'
+import type { LensId } from './lib/lenses/types'
+import { ESSENTIALS_BUCKETS } from './lib/lenses/types'
+import { mapToEssentialsBucket } from './lib/lenses/essentials'
 import { exportTaxCSV } from './lib/lenses/export'
 import { getStoredApiKey } from './lib/apiKey'
-import { readCsvFile } from './lib/readCsv'
-import { detectFormat, parseTransactions } from './lib/parser'
-import { categorizeTransactions } from './lib/categorize'
 import { buildSankeyData } from './lib/sankey'
-import { detectTransfers } from './lib/transfers'
-import type { LoadedFile } from './lib/types'
-import type { Budget } from './lib/budget-types'
-import { generateBudget, compareBudgetToActual, countMonths } from './lib/budget'
-import { saveBudget, loadBudget, clearBudget } from './lib/budgetStorage'
-import { BudgetPanel } from './components/BudgetPanel'
-
-let fileCounter = 0
-
-type AppState = 'idle' | 'loading' | 'categorizing' | 'done'
-
-function toDateStr(d: Date): string {
-  return d.toISOString().substring(0, 10)
-}
+import { useCategorization } from './hooks/useCategorization'
+import { useTaxLens } from './hooks/useTaxLens'
+import { useBudget } from './hooks/useBudget'
 
 export function App() {
-  const [files, setFiles] = useState<LoadedFile[]>([])
-  const [error, setError] = useState<string | null>(null)
   const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey())
-  const [overrides, setOverrides] = useState<Record<string, string>>({})
-  const [appState, setAppState] = useState<AppState>('idle')
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
   const [mergeThreshold, setMergeThreshold] = useState(0.02)
   const [activeLens, setActiveLens] = useState<LensId>('spending')
-  const [taxResults, setTaxResults] = useState<TaxResult[] | null>(null)
-  const [taxProgress, setTaxProgress] = useState<{ done: number; total: number } | null>(null)
-  const [taxOverrides, setTaxOverrides] = useState<Record<string, TaxArea>>({})
-  const [categorizationMode, setCategorizationMode] = useState<CategorizationMode>('simple')
-  /** The mode that was used for the last successful categorization run */
-  const [lastCategorizedMode, setLastCategorizedMode] = useState<CategorizationMode | null>(null)
-  const [budget, setBudget] = useState<Budget | null>(() => loadBudget())
-  const [showBudgetOverlay, setShowBudgetOverlay] = useState(false)
-  const abortRef = useRef<AbortController | null>(null)
 
-  // All transactions across all files — memoized so downstream memos get a stable reference
-  // that updates whenever files (or their transaction categories) change
-  const allTransactions = useMemo(
-    () => files.flatMap((f) => f.transactions),
-    [files],
-  )
+  const cat = useCategorization(apiKey)
+  const tax = useTaxLens()
 
-  // Date bounds
+  // Date bounds across all transactions
   const { minDate, maxDate } = useMemo(() => {
-    if (allTransactions.length === 0) return { minDate: '', maxDate: '' }
-    const dates = allTransactions.map((tx) => tx.date.getTime())
+    if (cat.allTransactions.length === 0) return { minDate: '', maxDate: '' }
+    const dates = cat.allTransactions.map((tx) => tx.date.getTime())
     return {
-      minDate: toDateStr(new Date(Math.min(...dates))),
-      maxDate: toDateStr(new Date(Math.max(...dates))),
+      minDate: new Date(Math.min(...dates)).toISOString().substring(0, 10),
+      maxDate: new Date(Math.max(...dates)).toISOString().substring(0, 10),
     }
-  }, [allTransactions])
+  }, [cat.allTransactions])
 
-  // Initialize date range to all data when first transactions load
+  // Initialize date range to full data span on first load
   useEffect(() => {
     if (minDate && maxDate && !dateRange.start) {
       setDateRange({ start: minDate, end: maxDate })
     }
   }, [minDate, maxDate, dateRange.start])
 
-  // Filtered transactions based on date range
   const filteredTransactions = useMemo(() => {
-    if (!dateRange.start || !dateRange.end) return allTransactions
+    if (!dateRange.start || !dateRange.end) return cat.allTransactions
     const start = new Date(dateRange.start).getTime()
     const end = new Date(dateRange.end + 'T23:59:59').getTime()
-    return allTransactions.filter(
+    return cat.allTransactions.filter(
       (tx) => tx.date.getTime() >= start && tx.date.getTime() <= end,
     )
-  }, [allTransactions, dateRange])
+  }, [cat.allTransactions, dateRange])
 
-  // Check for categorized transactions (any with non-default category from Claude)
-  const hasCategorized = allTransactions.some((tx) => tx.subcategory !== '')
-
-  // Files where format detection failed (no transactions parsed)
-  const parseFailedFiles = files.filter((f) => (f.rawRows?.length ?? 0) > 0 && f.transactions.length === 0)
+  const budget = useBudget(
+    cat.allTransactions,
+    filteredTransactions,
+    cat.hasCategorized,
+    cat.overrides,
+    minDate,
+    maxDate,
+    dateRange,
+    activeLens,
+  )
 
   const handleApiKey = useCallback((key: string) => {
     setApiKey(key)
   }, [])
 
-  const handleFiles = useCallback(async (newFiles: File[]) => {
-    setError(null)
-    setAppState('loading')
-    try {
-      const loaded = await Promise.all(
-        newFiles.map(async (f): Promise<LoadedFile> => {
-          const { headers, rows } = await readCsvFile(f)
-          try {
-            const mapping = detectFormat(headers, rows)
-            const transactions = parseTransactions(f.name, rows, mapping)
-            // Parse succeeded — drop rawRows to free memory
-            return {
-              id: `file-${++fileCounter}`,
-              name: f.name,
-              rawHeaders: headers,
-              transactions,
-            }
-          } catch {
-            // Format detection failed — keep rawRows so RawTable can show them
-            return {
-              id: `file-${++fileCounter}`,
-              name: f.name,
-              rawHeaders: headers,
-              rawRows: rows,
-              transactions: [],
-            }
-          }
-        }),
-      )
-      setFiles((prev) => {
-        const existingNames = new Set(prev.map((f) => f.name))
-        const fresh = loaded.filter((f) => !existingNames.has(f.name))
-        const next = [...prev, ...fresh]
-
-        // Run transfer detection across all loaded files
-        const allTx = next.flatMap((f) => f.transactions)
-        const transferIds = detectTransfers(allTx)
-        if (transferIds.size === 0) return next
-
-        return next.map((file) => ({
-          ...file,
-          transactions: file.transactions.map((tx) =>
-            transferIds.has(tx.id) ? { ...tx, category: 'Transfer' } : tx,
-          ),
-        }))
-      })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to read file')
-    } finally {
-      setAppState('idle')
-    }
-  }, [])
-
-  const handleRemove = useCallback((id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id))
-  }, [])
-
-  const handleOverride = useCallback((id: string, category: string) => {
-    setOverrides((prev) => ({ ...prev, [id]: category }))
-  }, [])
-
-  const handleCategorize = useCallback(async () => {
-    if (!apiKey || allTransactions.length === 0) return
-    setError(null)
-
-    // If mode changed after a previous categorization, re-run all non-Transfer transactions
-    // so subcategories are regenerated for the new taxonomy. Otherwise, only send
-    // transactions that haven't been categorized yet.
-    const modeChangedRun = hasCategorized && lastCategorizedMode !== null && lastCategorizedMode !== categorizationMode
-    const uncategorized = allTransactions.filter(
-      (tx) => tx.category !== 'Transfer' && (modeChangedRun || tx.subcategory === ''),
-    )
-    if (uncategorized.length === 0) return
-
-    setAppState('categorizing')
-    setProgress({ done: 0, total: uncategorized.length })
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    try {
-      const results = await categorizeTransactions(
-        uncategorized,
-        apiKey,
-        (done, total) => setProgress({ done, total }),
-        controller.signal,
-        categorizationMode,
-      )
-
-      // All batches succeeded — apply atomically
-      const resultMap = new Map(results.map((r) => [r.id, r]))
-
-      setFiles((prev) =>
-        prev.map((file) => ({
-          ...file,
-          transactions: file.transactions.map((tx) => {
-            // Never overwrite transfer-detection results — those are authoritative
-            if (tx.category === 'Transfer') return tx
-            const result = resultMap.get(tx.id)
-            if (!result) return tx
-            return { ...tx, category: result.category, subcategory: result.subcategory }
-          }),
-        })),
-      )
-      setLastCategorizedMode(categorizationMode)
-      setAppState('done')
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Categorization failed'
-      // Don't show "cancelled" as an error — it was intentional
-      if (!controller.signal.aborted) {
-        setError(msg)
-      }
-      setAppState('idle')
-    } finally {
-      setProgress(null)
-      abortRef.current = null
-    }
-  }, [apiKey, allTransactions, categorizationMode, hasCategorized, lastCategorizedMode])
-
-  const handleCancel = useCallback(() => {
-    abortRef.current?.abort()
-  }, [])
-
   const handleLensChange = useCallback(async (lens: LensId) => {
     setActiveLens(lens)
-    if (lens === 'tax-us' && !taxResults && apiKey && allTransactions.length > 0) {
-      setError(null)
-      setAppState('categorizing')
-      setTaxProgress({ done: 0, total: allTransactions.length })
-      const controller = new AbortController()
-      abortRef.current = controller
-      try {
-        const results = await taxCategorize(
-          allTransactions,
-          apiKey,
-          (done, total) => setTaxProgress({ done, total }),
-          controller.signal,
-        )
-        setTaxResults(results)
-      } catch (e) {
-        if (!controller.signal.aborted) {
-          setError(e instanceof Error ? e.message : 'Tax categorization failed')
-        }
-        setActiveLens('spending')
-      } finally {
-        setTaxProgress(null)
-        setAppState('done')
-        abortRef.current = null
-      }
+    if (lens === 'tax-us') {
+      const ok = await tax.fetchTaxResults(
+        cat.allTransactions,
+        apiKey,
+        cat.abortRef,
+        cat.setError,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cat.appState as any,
+      )
+      if (!ok) setActiveLens('spending')
     }
-  }, [taxResults, apiKey, allTransactions])
+  }, [tax, cat.allTransactions, apiKey, cat.abortRef, cat.setError, cat.appState])
 
-  // Reset to idle when files change
-  useEffect(() => {
-    if (appState === 'done') setAppState('idle')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files.length])
-
-  const modeChanged = hasCategorized && lastCategorizedMode !== null && lastCategorizedMode !== categorizationMode
-
-  const uncategorizedCount = modeChanged
-    ? allTransactions.filter((tx) => tx.category !== 'Transfer').length
-    : allTransactions.filter((tx) => tx.subcategory === '' && tx.category !== 'Transfer').length
-
-  const showCategorizeBtn =
-    (uncategorizedCount > 0 || modeChanged) && !!apiKey && appState !== 'categorizing'
-
-  const handleTaxOverride = useCallback((id: string, taxArea: TaxArea) => {
-    setTaxOverrides((prev) => ({ ...prev, [id]: taxArea }))
-  }, [])
-
-  const handleGenerateBudget = useCallback(() => {
-    if (!hasCategorized || allTransactions.length === 0) return
-    const sourceRange = minDate && maxDate
-      ? { start: minDate, end: maxDate }
-      : { start: toDateStr(new Date()), end: toDateStr(new Date()) }
-    const generated = generateBudget(allTransactions, sourceRange)
-    setBudget(generated)
-    saveBudget(generated)
-  }, [hasCategorized, allTransactions, minDate, maxDate])
-
-  const handleUpdateBudget = useCallback((updated: Budget) => {
-    setBudget(updated)
-    saveBudget(updated)
-  }, [])
-
-  const handleImportBudget = useCallback((imported: Budget) => {
-    setBudget(imported)
-    saveBudget(imported)
-  }, [])
-
-  const handleClearBudget = useCallback(() => {
-    setBudget(null)
-    clearBudget()
-  }, [])
-
-  // Essentials lens: remap each tx's spending category to a bucket name
-  const essentialsOverrides = useMemo(() => {
-    if (activeLens !== 'essentials') return {}
-    const result: Record<string, string> = {}
-    for (const tx of filteredTransactions) {
-      const spendingCategory = overrides[tx.id] ?? tx.category
-      if (spendingCategory === 'Transfer') continue
-      result[tx.id] = mapToEssentialsBucket(spendingCategory)
-    }
-    return result
-  }, [activeLens, filteredTransactions, overrides])
-
-  // Essentials bucket → color map (passed as extraNodeColors)
+  // Essentials lens: remap each tx to its bucket
   const essentialsColors = useMemo(
     () => Object.fromEntries(ESSENTIALS_BUCKETS.map((b) => [b.id, b.color])),
     [],
   )
 
-  // Tax area → color map
-  const taxColors = useMemo(
-    () => Object.fromEntries(TAX_AREAS.map((a) => [a.id, a.color])),
-    [],
-  )
-
-  // Tax category map: tx.id → taxArea (API result + manual overrides)
-  const taxCategoryMap = useMemo(() => {
-    if (activeLens !== 'tax-us' || !taxResults) return {}
-    const resultMap = new Map(taxResults.map((r) => [r.id, r]))
+  const essentialsOverrides = useMemo(() => {
+    if (activeLens !== 'essentials') return {}
     const result: Record<string, string> = {}
     for (const tx of filteredTransactions) {
-      // Preserve Transfer category — buildSankeyData filters these out, same as spending mode
-      const spendingCategory = overrides[tx.id] ?? tx.category
+      const spendingCategory = cat.overrides[tx.id] ?? tx.category
       if (spendingCategory === 'Transfer') continue
-      // Manual override takes precedence over API result
-      if (taxOverrides[tx.id]) {
-        result[tx.id] = taxOverrides[tx.id]
-      } else {
-        const taxResult = resultMap.get(tx.id)
-        if (taxResult) result[tx.id] = taxResult.taxArea
-      }
+      result[tx.id] = mapToEssentialsBucket(spendingCategory)
     }
     return result
-  }, [activeLens, taxResults, taxOverrides, filteredTransactions, overrides])
+  }, [activeLens, filteredTransactions, cat.overrides])
 
-  const budgetComparison = useMemo(() => {
-    if (!budget || !hasCategorized || filteredTransactions.length === 0) return null
-    if (!dateRange.start || !dateRange.end) return null
-    return compareBudgetToActual(budget, filteredTransactions, overrides, dateRange)
-  }, [budget, hasCategorized, filteredTransactions, overrides, dateRange])
-
-  const hasEnoughHistory = useMemo(() => {
-    if (!minDate || !maxDate) return false
-    return countMonths(minDate, maxDate) >= 3
-  }, [minDate, maxDate])
-
-  // Budget overlay: category → monthly budgeted amount (for SankeyChart ghost rects)
-  const budgetOverlayMap = useMemo(() => {
-    if (!budget || !showBudgetOverlay || activeLens !== 'spending') return undefined
-    const map: Record<string, number> = {}
-    for (const line of budget.expenses) {
-      if (line.type === 'one-time') continue
-      // Aggregate by category (multiple merchant lines may share a category)
-      map[line.category] = (map[line.category] ?? 0) + line.amount
-    }
-    return map
-  }, [budget, showBudgetOverlay, activeLens])
+  const taxCategoryMap = useMemo(
+    () => tax.filteredTaxCategoryMap(filteredTransactions, cat.overrides, activeLens),
+    [tax, filteredTransactions, cat.overrides, activeLens],
+  )
 
   const sankeyData = useMemo(() => {
-    if (!hasCategorized) return null
+    if (!cat.hasCategorized) return null
     if (activeLens === 'essentials') {
       return buildSankeyData(filteredTransactions, essentialsOverrides, mergeThreshold, essentialsColors)
     }
-    if (activeLens === 'tax-us' && taxResults) {
-      const data = buildSankeyData(filteredTransactions, taxCategoryMap, mergeThreshold, taxColors)
-      // Compute deductible vs non-deductible totals for the header
+    if (activeLens === 'tax-us' && tax.taxResults) {
+      const data = buildSankeyData(filteredTransactions, taxCategoryMap, mergeThreshold, tax.taxColors)
       const deductibleIds = new Set(['schedule-a', 'schedule-c', 'form-2441', 'hsa-medical'])
       let totalDeductible = 0
       let totalNonDeductible = 0
@@ -382,8 +126,18 @@ export function App() {
       }
       return { ...data, totalDeductible, totalNonDeductible }
     }
-    return buildSankeyData(filteredTransactions, overrides, mergeThreshold, {}, categorizationMode)
-  }, [hasCategorized, activeLens, filteredTransactions, overrides, essentialsOverrides, essentialsColors, taxResults, taxCategoryMap, taxColors, mergeThreshold, categorizationMode])
+    return buildSankeyData(
+      filteredTransactions,
+      cat.overrides,
+      mergeThreshold,
+      {},
+      cat.categorizationMode,
+    )
+  }, [
+    cat.hasCategorized, activeLens, filteredTransactions, cat.overrides,
+    essentialsOverrides, essentialsColors, tax.taxResults, taxCategoryMap,
+    tax.taxColors, mergeThreshold, cat.categorizationMode,
+  ])
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
 
@@ -397,37 +151,40 @@ export function App() {
       <main className="app-main">
         <ApiKeyEntry onKey={handleApiKey} hasKey={!!apiKey} />
 
-        <DropZone onFiles={handleFiles} disabled={appState === 'categorizing' || appState === 'loading'} />
+        <DropZone
+          onFiles={cat.handleFiles}
+          disabled={cat.appState === 'categorizing' || cat.appState === 'loading'}
+        />
 
-        {appState === 'loading' && (
+        {cat.appState === 'loading' && (
           <div className="loading-state">
             <span className="loading-spinner" />
             Reading files…
           </div>
         )}
 
-        {error && (
+        {cat.error && (
           <div className="error-banner">
-            <span>{error}</span>
-            <button className="error-banner__dismiss" onClick={() => setError(null)} aria-label="Dismiss">✕</button>
+            <span>{cat.error}</span>
+            <button className="error-banner__dismiss" onClick={() => cat.setError(null)} aria-label="Dismiss">✕</button>
           </div>
         )}
 
-        {parseFailedFiles.length > 0 && (
+        {cat.parseFailedFiles.length > 0 && (
           <div className="warn-banner">
-            <strong>Format detection failed</strong> for: {parseFailedFiles.map((f) => f.name).join(', ')}.
+            <strong>Format detection failed</strong> for: {cat.parseFailedFiles.map((f) => f.name).join(', ')}.
             {apiKey
               ? ' Categorize with Claude above to parse these files.'
               : ' Add a Claude API key above to auto-detect the format.'}
           </div>
         )}
 
-        {allTransactions.length > 0 && (
+        {cat.allTransactions.length > 0 && (
           <div className="file-summary">
-            <span>{files.length} file{files.length !== 1 ? 's' : ''} loaded</span>
+            <span>{cat.files.length} file{cat.files.length !== 1 ? 's' : ''} loaded</span>
             <span className="file-summary__sep">·</span>
-            <span>{allTransactions.length} transactions</span>
-            {hasCategorized && filteredTransactions.length !== allTransactions.length && (
+            <span>{cat.allTransactions.length} transactions</span>
+            {cat.hasCategorized && filteredTransactions.length !== cat.allTransactions.length && (
               <>
                 <span className="file-summary__sep">·</span>
                 <span>{filteredTransactions.length} in range</span>
@@ -436,76 +193,80 @@ export function App() {
           </div>
         )}
 
-        {allTransactions.length > 0 && apiKey && appState !== 'categorizing' && (
+        {cat.allTransactions.length > 0 && apiKey && cat.appState !== 'categorizing' && (
           <CategorizationModeSelector
-            mode={categorizationMode}
-            onChange={setCategorizationMode}
+            mode={cat.categorizationMode}
+            onChange={cat.setCategorizationMode}
           />
         )}
 
-        {showCategorizeBtn && (
+        {cat.showCategorizeBtn && (
           <div className="categorize-wrap">
-            <button className="categorize-btn" onClick={handleCategorize}>
-              {hasCategorized ? 'Re-categorize with Claude' : 'Categorize with Claude'}
+            <button className="categorize-btn" onClick={cat.handleCategorize}>
+              {cat.hasCategorized ? 'Re-categorize with Claude' : 'Categorize with Claude'}
             </button>
             <p className="categorize-hint">
-              Sends merchant names and amounts to Claude API to classify {uncategorizedCount} transaction{uncategorizedCount !== 1 ? 's' : ''} into spending categories.
-              Your browser calls Claude directly — no data passes through our servers.
+              Sends merchant names and amounts to Claude API to classify{' '}
+              {cat.uncategorizedCount} transaction{cat.uncategorizedCount !== 1 ? 's' : ''} into
+              spending categories. Your browser calls Claude directly — no data passes through our
+              servers.
             </p>
           </div>
         )}
 
-        {modeChanged && appState !== 'categorizing' && (
+        {cat.modeChanged && cat.appState !== 'categorizing' && (
           <div className="warn-banner">
-            Mode changed to <strong>{categorizationMode}</strong>. Hit <em>Re-categorize with Claude</em> to apply the new breakdown.
+            Mode changed to <strong>{cat.categorizationMode}</strong>. Hit{' '}
+            <em>Re-categorize with Claude</em> to apply the new breakdown.
           </div>
         )}
 
-        {!apiKey && uncategorizedCount > 0 && (
+        {!apiKey && cat.uncategorizedCount > 0 && (
           <div className="warn-banner">
-            No API key set. Add your Claude API key above to categorize transactions and see the Sankey diagram.
+            No API key set. Add your Claude API key above to categorize transactions and see the
+            Sankey diagram.
           </div>
         )}
 
-        {appState === 'categorizing' && progress && (
+        {cat.appState === 'categorizing' && cat.progress && (
           <div className="progress-bar-wrap">
             <div
               className="progress-bar"
-              style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+              style={{ width: `${Math.round((cat.progress.done / cat.progress.total) * 100)}%` }}
             />
             <span className="progress-label">
-              Categorizing… {progress.done}/{progress.total}
+              Categorizing… {cat.progress.done}/{cat.progress.total}
             </span>
-            <button className="progress-cancel" onClick={handleCancel} aria-label="Cancel categorization">
+            <button className="progress-cancel" onClick={cat.handleCancel} aria-label="Cancel categorization">
               Cancel
             </button>
           </div>
         )}
 
-        {appState === 'categorizing' && taxProgress && (
+        {cat.appState === 'categorizing' && tax.taxProgress && (
           <div className="progress-bar-wrap">
             <div
               className="progress-bar progress-bar--tax"
-              style={{ width: `${Math.round((taxProgress.done / taxProgress.total) * 100)}%` }}
+              style={{ width: `${Math.round((tax.taxProgress.done / tax.taxProgress.total) * 100)}%` }}
             />
             <span className="progress-label">
-              Tax analysis… {taxProgress.done}/{taxProgress.total}
+              Tax analysis… {tax.taxProgress.done}/{tax.taxProgress.total}
             </span>
-            <button className="progress-cancel" onClick={handleCancel} aria-label="Cancel tax categorization">
+            <button className="progress-cancel" onClick={cat.handleCancel} aria-label="Cancel tax categorization">
               Cancel
             </button>
           </div>
         )}
 
-        {hasCategorized && (
+        {cat.hasCategorized && (
           <LensSwitcher
             active={activeLens}
             onChange={handleLensChange}
-            taxReady={hasCategorized}
+            taxReady={cat.hasCategorized}
           />
         )}
 
-        {hasCategorized && minDate && (
+        {cat.hasCategorized && minDate && (
           <DateFilter
             range={dateRange}
             minDate={minDate}
@@ -514,26 +275,26 @@ export function App() {
           />
         )}
 
-        {activeLens === 'tax-us' && appState === 'categorizing' && taxProgress && (
+        {activeLens === 'tax-us' && cat.appState === 'categorizing' && tax.taxProgress && (
           <div className="lens-loading-state">
             <span className="loading-spinner" />
-            Analyzing {taxProgress.total} transactions for tax areas…
+            Analyzing {tax.taxProgress.total} transactions for tax areas…
           </div>
         )}
 
-        {activeLens === 'tax-us' && !taxResults && appState !== 'categorizing' && hasCategorized && (
+        {activeLens === 'tax-us' && !tax.taxResults && cat.appState !== 'categorizing' && cat.hasCategorized && (
           <div className="empty-state">
             <p>Tax analysis failed. Check your API key and try again.</p>
           </div>
         )}
 
-        {budget && activeLens === 'spending' && hasCategorized && (
+        {budget.budget && activeLens === 'spending' && cat.hasCategorized && (
           <div className="budget-overlay-toggle">
             <label className="budget-overlay-label">
               <input
                 type="checkbox"
-                checked={showBudgetOverlay}
-                onChange={(e) => setShowBudgetOverlay(e.target.checked)}
+                checked={budget.showBudgetOverlay}
+                onChange={(e) => budget.setShowBudgetOverlay(e.target.checked)}
               />
               Show budget limits on chart
             </label>
@@ -542,11 +303,14 @@ export function App() {
 
         {sankeyIsEmpty ? (
           <div className="empty-state">
-            <p>No {activeLens === 'tax-us' ? 'deductible expenses' : 'income or expenses'} to display for this date range.</p>
+            <p>
+              No {activeLens === 'tax-us' ? 'deductible expenses' : 'income or expenses'} to
+              display for this date range.
+            </p>
             <p className="empty-state__hint">
               {activeLens === 'tax-us'
                 ? 'Everything in this period was classified as Non-Deductible, or try expanding the date range.'
-                : 'Try expanding the date range, or check that transfers aren\'t masking income/expenses.'}
+                : "Try expanding the date range, or check that transfers aren't masking income/expenses."}
             </p>
           </div>
         ) : (
@@ -555,19 +319,19 @@ export function App() {
               data={sankeyData}
               mergeThreshold={mergeThreshold}
               onMergeThresholdChange={setMergeThreshold}
-              width={categorizationMode === 'detailed' && activeLens === 'spending' ? 1200 : undefined}
-              height={categorizationMode === 'detailed' && activeLens === 'spending' ? 560 : undefined}
-              budgetOverlay={budgetOverlayMap}
+              width={cat.categorizationMode === 'detailed' && activeLens === 'spending' ? 1200 : undefined}
+              height={cat.categorizationMode === 'detailed' && activeLens === 'spending' ? 560 : undefined}
+              budgetOverlay={budget.budgetOverlayMap}
             />
           )
         )}
 
-        {activeLens === 'tax-us' && taxResults && (
+        {activeLens === 'tax-us' && tax.taxResults && (
           <>
             <div className="tax-export-wrap">
               <button
                 className="tax-export-btn"
-                onClick={() => exportTaxCSV(filteredTransactions, taxResults, taxOverrides)}
+                onClick={() => exportTaxCSV(filteredTransactions, tax.taxResults!, tax.taxOverrides)}
               >
                 Export for CPA
               </button>
@@ -577,32 +341,32 @@ export function App() {
             </div>
             <TaxFlagPanel
               transactions={filteredTransactions}
-              taxResults={taxResults}
-              taxOverrides={taxOverrides}
-              onOverride={handleTaxOverride}
+              taxResults={tax.taxResults}
+              taxOverrides={tax.taxOverrides}
+              onOverride={tax.handleTaxOverride}
             />
           </>
         )}
 
         <BudgetPanel
-          budget={budget}
-          comparison={budgetComparison}
-          canGenerate={hasCategorized}
-          hasEnoughHistory={hasEnoughHistory}
-          onGenerate={handleGenerateBudget}
-          onUpdate={handleUpdateBudget}
-          onImport={handleImportBudget}
-          onClear={handleClearBudget}
+          budget={budget.budget}
+          comparison={budget.budgetComparison}
+          canGenerate={cat.hasCategorized}
+          hasEnoughHistory={budget.hasEnoughHistory}
+          onGenerate={budget.handleGenerateBudget}
+          onUpdate={budget.handleUpdateBudget}
+          onImport={budget.handleImportBudget}
+          onClear={budget.handleClearBudget}
         />
 
-        {hasCategorized ? (
+        {cat.hasCategorized ? (
           <TransactionTable
             transactions={filteredTransactions}
-            overrides={overrides}
-            onOverride={handleOverride}
+            overrides={cat.overrides}
+            onOverride={cat.handleOverride}
           />
         ) : (
-          <RawTable files={files} onRemove={handleRemove} />
+          <RawTable files={cat.files} onRemove={cat.handleRemove} />
         )}
       </main>
     </div>
