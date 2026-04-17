@@ -677,6 +677,42 @@ body {
   color: #90cdf4;
 }
 
+/* ErrorBoundary */
+.error-boundary {
+  background: #1a202c;
+  border: 1px solid #742a2a;
+  border-radius: 8px;
+  padding: 20px 24px;
+  text-align: center;
+}
+
+.error-boundary__title {
+  color: #fc8181;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.error-boundary__detail {
+  color: #718096;
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+}
+
+.error-boundary__reset {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 6px 16px;
+  transition: background 0.15s;
+}
+
+.error-boundary__reset:hover {
+  background: #3d4f63;
+}
+
 /* HowItWorksModal */
 .hiw-backdrop {
   position: fixed;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import * as d3 from 'd3'
+import { select } from 'd3-selection'
 import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey'
 import type { SankeyNodeMinimal, SankeyLinkMinimal } from 'd3-sankey'
 import type { SankeyData, VendorTotal } from '../lib/sankey'
@@ -67,7 +67,7 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
   useEffect(() => {
     if (!svgRef.current || data.nodes.length === 0) return
 
-    const svg = d3.select(svgRef.current)
+    const svg = select(svgRef.current)
     svg.selectAll('*').remove()
 
     const innerWidth = width - MARGIN.left - MARGIN.right
@@ -121,10 +121,10 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
       .attr('stroke-width', (d) => Math.max(1, d.width ?? 1))
       .attr('stroke-opacity', 0.3)
       .on('mouseover', function () {
-        d3.select(this).attr('stroke-opacity', 0.6)
+        select(this).attr('stroke-opacity', 0.6)
       })
       .on('mouseout', function () {
-        d3.select(this).attr('stroke-opacity', 0.3)
+        select(this).attr('stroke-opacity', 0.3)
       })
       .append('title')
       .text((d) => {

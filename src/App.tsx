@@ -23,6 +23,7 @@ import { HowItWorksModal, getHowItWorksSeen, markHowItWorksSeen } from './compon
 import { AnomalyInsights } from './components/AnomalyInsights'
 import { detectAnomalies } from './lib/anomaly'
 import { CategoryVisibilityToggle } from './components/CategoryVisibilityToggle'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { EXPENSE_CATEGORIES } from './lib/types'
 
 export function App() {
@@ -379,14 +380,16 @@ export function App() {
           </div>
         ) : (
           sankeyData && (
-            <SankeyChart
-              data={sankeyData}
-              mergeThreshold={mergeThreshold}
-              onMergeThresholdChange={setMergeThreshold}
-              width={cat.categorizationMode === 'detailed' && activeLens === 'spending' ? 1200 : undefined}
-              height={cat.categorizationMode === 'detailed' && activeLens === 'spending' ? 560 : undefined}
-              budgetOverlay={budget.budgetOverlayMap}
-            />
+            <ErrorBoundary>
+              <SankeyChart
+                data={sankeyData}
+                mergeThreshold={mergeThreshold}
+                onMergeThresholdChange={setMergeThreshold}
+                width={cat.categorizationMode === 'detailed' && activeLens === 'spending' ? 1200 : undefined}
+                height={cat.categorizationMode === 'detailed' && activeLens === 'spending' ? 560 : undefined}
+                budgetOverlay={budget.budgetOverlayMap}
+              />
+            </ErrorBoundary>
           )
         )}
 
@@ -414,16 +417,18 @@ export function App() {
 
         <AnomalyInsights anomalies={anomalies} />
 
-        <BudgetPanel
-          budget={budget.budget}
-          comparison={budget.budgetComparison}
-          canGenerate={cat.hasCategorized}
-          hasEnoughHistory={budget.hasEnoughHistory}
-          onGenerate={budget.handleGenerateBudget}
-          onUpdate={budget.handleUpdateBudget}
-          onImport={budget.handleImportBudget}
-          onClear={budget.handleClearBudget}
-        />
+        <ErrorBoundary>
+          <BudgetPanel
+            budget={budget.budget}
+            comparison={budget.budgetComparison}
+            canGenerate={cat.hasCategorized}
+            hasEnoughHistory={budget.hasEnoughHistory}
+            onGenerate={budget.handleGenerateBudget}
+            onUpdate={budget.handleUpdateBudget}
+            onImport={budget.handleImportBudget}
+            onClear={budget.handleClearBudget}
+          />
+        </ErrorBoundary>
 
         {cat.hasCategorized ? (
           <TransactionTable

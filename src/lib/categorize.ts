@@ -255,12 +255,13 @@ function parseBatchResponse(text: string, requestedIds: string[], mode = 'simple
 
   for (const item of parsed) {
     if (typeof item !== 'object' || item === null) {
-      throw new Error(`Batch item is not an object: ${JSON.stringify(item)}`)
+      // Skip malformed items rather than losing the whole batch
+      continue
     }
     const obj = item as Record<string, unknown>
 
     if (typeof obj['id'] !== 'string' || !obj['id']) {
-      throw new Error(`Batch item missing string 'id': ${JSON.stringify(item)}`)
+      continue
     }
     if (typeof obj['category'] === 'string') {
       obj['category'] = normalizeCategory(obj['category'])
@@ -354,21 +355,37 @@ export async function categorizeTransactions(
     if (signal?.aborted) throw new Error('Categorization cancelled.')
     const items = batch.map((tx) => ({ id: tx.id, description: tx.description, amount: tx.amount }))
     const requestedIds = batch.map((tx) => tx.id)
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: mode === 'detailed' ? DETAILED_SYSTEM_PROMPT : SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(items) }],
-    })
-    const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
-    const results = parseBatchResponse(text, requestedIds, mode)
-    // Write results to cache
-    const txMap = new Map(batch.map((tx) => [tx.id, tx]))
-    for (const r of results) {
-      const tx = txMap.get(r.id)
-      if (tx) setCached(tx.description, tx.amount, tx.type, mode, { category: r.category, subcategory: r.subcategory })
+
+    const MAX_ATTEMPTS = 3
+    let lastError: unknown
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (signal?.aborted) throw new Error('Categorization cancelled.')
+      try {
+        const response = await client.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          system: mode === 'detailed' ? DETAILED_SYSTEM_PROMPT : SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: JSON.stringify(items) }],
+        })
+        const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
+        const results = parseBatchResponse(text, requestedIds, mode)
+        // Write results to cache
+        const txMap = new Map(batch.map((tx) => [tx.id, tx]))
+        for (const r of results) {
+          const tx = txMap.get(r.id)
+          if (tx) setCached(tx.description, tx.amount, tx.type, mode, { category: r.category, subcategory: r.subcategory })
+        }
+        return results
+      } catch (err) {
+        lastError = err
+        if (signal?.aborted) throw new Error('Categorization cancelled.')
+        if (attempt < MAX_ATTEMPTS) {
+          // Exponential backoff: 2s, 4s
+          await new Promise((res) => setTimeout(res, 1000 * 2 ** attempt))
+        }
+      }
     }
-    return results
+    throw lastError
   }
 
   // Run batches with bounded concurrency
