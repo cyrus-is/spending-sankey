@@ -20,6 +20,7 @@ import { useCategorization } from './hooks/useCategorization'
 import { useTaxLens } from './hooks/useTaxLens'
 import { useBudget } from './hooks/useBudget'
 import { HowItWorksModal } from './components/HowItWorksModal'
+import { LandingPreview } from './components/LandingPreview'
 import { getHowItWorksSeen, markHowItWorksSeen } from './lib/howItWorksSeen'
 import { AnomalyInsights } from './components/AnomalyInsights'
 import { detectAnomalies } from './lib/anomaly'
@@ -115,7 +116,6 @@ export function App() {
     setApiKey(key)
   }, [])
 
-  const handleHowItWorks = useCallback(() => setShowHowItWorks(true), [])
   const handleCloseHowItWorks = useCallback(() => {
     markHowItWorksSeen()
     setShowHowItWorks(false)
@@ -201,8 +201,17 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>WhoAteMyPaycheck</h1>
-        <p className="tagline">Drag-drop your bank CSVs, see where your money goes.</p>
+        <div className="app-header__text">
+          <h1>WhoAteMyPaycheck</h1>
+          <p className="tagline">Drag-drop your bank CSVs, see where your money goes.</p>
+        </div>
+        <button
+          className="app-header__hiw-btn"
+          onClick={() => setShowHowItWorks(true)}
+          title="How WhoAteMyPaycheck works"
+        >
+          How it works
+        </button>
       </header>
 
       <main className="app-main">
@@ -212,6 +221,10 @@ export function App() {
           onFiles={cat.handleFiles}
           disabled={cat.appState === 'categorizing' || cat.appState === 'loading'}
         />
+
+        {cat.files.length === 0 && cat.appState !== 'loading' && (
+          <LandingPreview />
+        )}
 
         {cat.appState === 'loading' && (
           <div className="loading-state">
@@ -339,7 +352,6 @@ export function App() {
             minDate={minDate}
             maxDate={maxDate}
             onChange={setDateRange}
-            onHowItWorks={handleHowItWorks}
           />
         )}
 

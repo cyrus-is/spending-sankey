@@ -67,6 +67,28 @@ export function HowItWorksModal({ open, onClose }: HowItWorksModalProps) {
           </ul>
         </section>
 
+        <section className="hiw-section">
+          <h3 className="hiw-section-title">Open source &amp; self-hosting</h3>
+          <p>
+            WhoAteMyPaycheck is fully open source under the{' '}
+            <a
+              href="https://github.com/cyrus-is/WhoAteMyPaycheck"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hiw-link"
+            >
+              cyrus-is/WhoAteMyPaycheck
+            </a>{' '}
+            repository on GitHub. Because it's a static site with no backend, you can self-host
+            your own instance in minutes:
+          </p>
+          <ol className="hiw-steps">
+            <li>Clone the repo and run <code>npm install && npm run build</code>.</li>
+            <li>Deploy the <code>dist/</code> folder to any static host — S3, Vercel, Cloudflare Pages, etc.</li>
+            <li>Your instance only ever calls the Anthropic API with the key you provide.</li>
+          </ol>
+        </section>
+
         <button className="hiw-cta" onClick={onClose}>Got it</button>
       </div>
     </div>
