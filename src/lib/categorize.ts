@@ -167,7 +167,7 @@ const CATEGORY_ALIASES: Record<string, string> = {
   // Entertainment
   entertainment: 'Entertainment', games: 'Entertainment', gaming: 'Entertainment',
   movies: 'Entertainment', concerts: 'Entertainment', sports: 'Entertainment',
-  streaming: 'Entertainment', alcohol: 'Entertainment',
+  streaming: 'Subscriptions', alcohol: 'Entertainment',
   // Health
   medical: 'Health', healthcare: 'Health', pharmacy: 'Health',
   fitness: 'Health', gym: 'Health', dental: 'Health',
