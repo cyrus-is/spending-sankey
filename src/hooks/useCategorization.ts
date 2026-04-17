@@ -3,7 +3,6 @@ import type { LoadedFile } from '../lib/types'
 import type { CategorizationMode } from '../components/CategorizationModeSelector'
 import { readCsvFile } from '../lib/readCsv'
 import { detectFormat, parseTransactions } from '../lib/parser'
-import { categorizeTransactions } from '../lib/categorize'
 import { detectTransfers } from '../lib/transfers'
 
 let fileCounter = 0
@@ -148,6 +147,7 @@ export function useCategorization(apiKey: string): CategorizationState {
     abortRef.current = controller
 
     try {
+      const { categorizeTransactions } = await import('../lib/categorize')
       const results = await categorizeTransactions(
         uncategorized,
         apiKey,
