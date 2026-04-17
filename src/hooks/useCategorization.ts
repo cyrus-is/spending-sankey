@@ -80,12 +80,13 @@ export function useCategorization(apiKey: string): CategorizationState {
           const { headers, rows } = await readCsvFile(f)
           try {
             const mapping = detectFormat(headers, rows)
-            const transactions = parseTransactions(f.name, rows, mapping)
+            const { transactions, skippedRows } = parseTransactions(f.name, rows, mapping)
             return {
               id: `file-${++fileCounter}`,
               name: f.name,
               rawHeaders: headers,
               transactions,
+              ...(skippedRows > 0 ? { skippedRows } : {}),
             }
           } catch {
             return {

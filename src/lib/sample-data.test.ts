@@ -24,7 +24,7 @@ describe('sample-data parsing', () => {
     expect(mapping.amount).toBe('Amount')
     expect(mapping.dateOrder).toBe('mdy')
 
-    const txns = parseTransactions('chase-checking.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('chase-checking.csv', rows, mapping)
     expect(txns.length).toBeGreaterThan(30)
 
     const payroll = txns.find((t) => t.description.includes('DIRECT DEPOSIT'))
@@ -45,7 +45,7 @@ describe('sample-data parsing', () => {
     expect(mapping.description).toBe('Payee')
     expect(mapping.amount).toBe('Amount')
 
-    const txns = parseTransactions('bofa-credit-card.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('bofa-credit-card.csv', rows, mapping)
     expect(txns.length).toBeGreaterThan(30)
 
     // Payments (negative amounts) should be credits
@@ -69,7 +69,7 @@ describe('sample-data parsing', () => {
     expect(mapping.amount).toBeUndefined()
     expect(mapping.dateOrder).toBe('mdy') // ISO dates, not slash
 
-    const txns = parseTransactions('credit-union-checking.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('credit-union-checking.csv', rows, mapping)
     expect(txns.length).toBeGreaterThan(35)
 
     const payroll = txns.find((t) => t.description.includes('PAYROLL'))
@@ -91,7 +91,7 @@ describe('sample-data parsing', () => {
     expect(mapping.description).toBe('Description')
     expect(mapping.amount).toBe('Amount')
 
-    const txns = parseTransactions('amex-gold.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('amex-gold.csv', rows, mapping)
     expect(txns.length).toBeGreaterThan(30)
 
     // Parenthetical amounts are expenses
@@ -125,7 +125,7 @@ describe('sample-data parsing', () => {
     expect(mapping.credit).toMatch(/Paid in/i)
     expect(mapping.dateOrder).toBe('dmy')
 
-    const txns = parseTransactions('monzo-uk.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('monzo-uk.csv', rows, mapping)
     expect(txns.length).toBeGreaterThan(20)
 
     // Salary is a credit

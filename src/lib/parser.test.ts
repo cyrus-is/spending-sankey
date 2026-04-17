@@ -138,7 +138,7 @@ describe('parseTransactions', () => {
       ['Transaction Date', 'Description', 'Amount', 'Type'],
       rows,
     )
-    const txns = parseTransactions('chase.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('chase.csv', rows, mapping)
     expect(txns).toHaveLength(2)
     expect(txns[0].description).toBe('AMAZON.COM*2K7')
     expect(txns[0].amount).toBe(42.99)
@@ -156,7 +156,7 @@ describe('parseTransactions', () => {
       ['Date', 'Description', 'Debit', 'Credit'],
       rows,
     )
-    const txns = parseTransactions('credit-union.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('credit-union.csv', rows, mapping)
     expect(txns).toHaveLength(2)
     expect(txns[0].type).toBe('debit')
     expect(txns[0].amount).toBe(87.54)
@@ -171,7 +171,7 @@ describe('parseTransactions', () => {
     ]
     const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
     expect(mapping.dateOrder).toBe('dmy')
-    const txns = parseTransactions('uk-bank.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('uk-bank.csv', rows, mapping)
     expect(txns[0].date.getMonth()).toBe(0)  // January
     expect(txns[0].date.getDate()).toBe(15)
   })
@@ -183,7 +183,7 @@ describe('parseTransactions', () => {
       { Date: '2024-01-01', Description: 'Valid', Amount: '10.00' },
     ]
     const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
-    const txns = parseTransactions('test.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('test.csv', rows, mapping)
     expect(txns).toHaveLength(1)
   })
 
@@ -192,7 +192,7 @@ describe('parseTransactions', () => {
       { Date: '2024-01-01', Description: 'Rent', Amount: '$1,500.00' },
     ]
     const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
-    const txns = parseTransactions('test.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('test.csv', rows, mapping)
     expect(txns[0].amount).toBe(1500)
   })
 
@@ -201,7 +201,7 @@ describe('parseTransactions', () => {
       { Date: '2024-01-01', Description: 'Refund', Amount: '(25.00)' },
     ]
     const mapping = detectFormat(['Date', 'Description', 'Amount'], rows)
-    const txns = parseTransactions('test.csv', rows, mapping)
+    const { transactions: txns } = parseTransactions('test.csv', rows, mapping)
     expect(txns[0].amount).toBe(25)
     expect(txns[0].type).toBe('credit')
   })

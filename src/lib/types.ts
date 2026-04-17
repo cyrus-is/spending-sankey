@@ -18,6 +18,8 @@ export interface LoadedFile {
   /** Present only when format detection failed (shown in RawTable). Dropped after successful parse. */
   rawRows?: Record<string, string>[]
   transactions: Transaction[]
+  /** Number of rows skipped due to unparseable dates */
+  skippedRows?: number
 }
 
 export type Category =

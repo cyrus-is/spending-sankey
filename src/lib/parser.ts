@@ -193,9 +193,10 @@ export function parseTransactions(
   sourceFile: string,
   rows: Record<string, string>[],
   mapping: ColumnMapping,
-): Transaction[] {
+): { transactions: Transaction[]; skippedRows: number } {
   const transactions: Transaction[] = []
   const dateOrder = mapping.dateOrder ?? 'mdy'
+  let skippedRows = 0
 
   for (const row of rows) {
     const rawDate = row[mapping.date] ?? ''
@@ -207,7 +208,8 @@ export function parseTransactions(
     try {
       date = parseDate(rawDate, dateOrder)
     } catch {
-      continue // skip unparseable rows
+      skippedRows++
+      continue
     }
 
     let amount: number
@@ -251,5 +253,5 @@ export function parseTransactions(
     })
   }
 
-  return transactions
+  return { transactions, skippedRows }
 }

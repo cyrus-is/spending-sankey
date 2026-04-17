@@ -235,6 +235,16 @@ export function App() {
           </div>
         )}
 
+        {(() => {
+          const totalSkipped = cat.files.reduce((sum, f) => sum + (f.skippedRows ?? 0), 0)
+          return totalSkipped > 0 ? (
+            <div className="warn-banner">
+              <strong>{totalSkipped} row{totalSkipped !== 1 ? 's' : ''} skipped</strong> due to unrecognized date format.
+              {' '}These transactions were excluded from the analysis.
+            </div>
+          ) : null
+        })()}
+
         {cat.allTransactions.length > 0 && (
           <div className="file-summary">
             <span>{cat.files.length} file{cat.files.length !== 1 ? 's' : ''} loaded</span>
