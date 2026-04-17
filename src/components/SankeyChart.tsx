@@ -48,18 +48,22 @@ const MARGIN = { top: 10, right: 160, bottom: 10, left: 160 }
 
 export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, budgetOverlay }: SankeyChartProps) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const wrapRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
 
-  // After tooltip renders, clamp its top so it never overflows the bottom of the wrap
+  // After tooltip renders, clamp to viewport edges so it never clips off-screen
   useEffect(() => {
-    if (!tooltip || !tooltipRef.current || !wrapRef.current) return
+    if (!tooltip || !tooltipRef.current) return
     const tipRect = tooltipRef.current.getBoundingClientRect()
-    const wrapRect = wrapRef.current.getBoundingClientRect()
-    const overflowBottom = (tooltip.y + tipRect.height) - wrapRect.height
-    if (overflowBottom > 0) {
-      setTooltip((prev) => prev && { ...prev, y: prev.y - overflowBottom - 4 })
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const MARGIN_PX = 8
+    let { x, y } = tooltip
+    if (x + tipRect.width > vw - MARGIN_PX) x = vw - tipRect.width - MARGIN_PX
+    if (y + tipRect.height > vh - MARGIN_PX) y = vh - tipRect.height - MARGIN_PX
+    if (x < MARGIN_PX) x = MARGIN_PX
+    if (x !== tooltip.x || y !== tooltip.y) {
+      setTooltip((prev) => prev && { ...prev, x, y })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on specific fields to avoid infinite loop (setTooltip inside effect)
   }, [tooltip?.label, tooltip?.x, tooltip?.y])
@@ -195,12 +199,9 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
       .style('cursor', (d) => (d.topVendors && d.topVendors.length > 0 ? 'pointer' : 'default'))
       .on('mousemove', function (event: MouseEvent, d: D3Node) {
         if (!d.topVendors || d.topVendors.length === 0) return
-        const wrap = wrapRef.current
-        if (!wrap) return
-        const rect = wrap.getBoundingClientRect()
         setTooltip({
-          x: event.clientX - rect.left + 12,
-          y: event.clientY - rect.top - 8,
+          x: event.clientX + 14,
+          y: event.clientY - 8,
           label: d.label,
           total: d.value ?? 0,
           vendors: d.topVendors,
@@ -291,7 +292,7 @@ export function SankeyChart({ data, mergeThreshold, onMergeThresholdChange, widt
           />
         </div>
       </div>
-      <div className="sankey-svg-wrap" ref={wrapRef} style={{ position: 'relative' }}>
+      <div className="sankey-svg-wrap">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}

@@ -1013,7 +1013,7 @@ body {
 }
 
 .sankey-tooltip {
-  position: absolute;
+  position: fixed;
   pointer-events: none;
   background: #1a202c;
   border: 1px solid #4a5568;
