@@ -60,6 +60,23 @@ describe('buildTaxCSV', () => {
     expect(csv).toContain('""QUOTED""')
   })
 
+  it('sanitizes formula injection prefixes in cell values', () => {
+    const txns = [
+      makeTx('tx-1', '=HYPERLINK("evil.com","click")'),
+      makeTx('tx-2', '+cmd|calc'),
+      makeTx('tx-3', '-2+3'),
+      makeTx('tx-4', '@SUM(A1:A10)'),
+    ]
+    const results: TaxResult[] = txns.map((t) => ({ id: t.id, taxArea: 'non-deductible' as const, ambiguous: false }))
+    const csv = buildTaxCSV(txns, results, {})
+    expect(csv).not.toContain('"=HYPERLINK')
+    expect(csv).not.toContain('"+cmd')
+    expect(csv).not.toContain('"-2+3')
+    expect(csv).not.toContain('"@SUM')
+    expect(csv).toContain('" =HYPERLINK')
+    expect(csv).toContain('" +cmd')
+  })
+
   it('sorts transactions within each tax area by date', () => {
     const txns = [
       { ...makeTx('tx-1', 'MARCH TX'), date: new Date('2024-03-15') },

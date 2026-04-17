@@ -2,6 +2,11 @@ import type { Transaction } from '../types'
 import type { TaxResult, TaxArea } from './types'
 import { TAX_AREAS } from './types'
 
+/** Prevent spreadsheet formula injection: prefix dangerous-start characters with a space. */
+function sanitizeCsvCell(value: string): string {
+  return /^[=+\-@]/.test(value) ? ` ${value}` : value
+}
+
 /** Pure: build a CSV string of tax-categorized transactions for a CPA. */
 export function buildTaxCSV(
   transactions: Transaction[],
@@ -37,7 +42,7 @@ export function buildTaxCSV(
   }
 
   return rows
-    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .map((row) => row.map((cell) => `"${sanitizeCsvCell(cell).replace(/"/g, '""')}"`).join(','))
     .join('\n')
 }
 

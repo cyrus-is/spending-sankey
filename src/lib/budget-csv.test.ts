@@ -74,6 +74,17 @@ describe('buildBudgetCSV', () => {
     const csv = buildBudgetCSV(budget)
     expect(csv).toContain('"Say ""hello"""')
   })
+
+  it('sanitizes formula injection prefixes in notes and merchant names', () => {
+    const budget = makeBudget()
+    budget.expenses[0].notes = '=HYPERLINK("evil.com")'
+    budget.expenses[0].merchant = '@EVIL'
+    const csv = buildBudgetCSV(budget)
+    expect(csv).not.toContain('"=HYPERLINK')
+    expect(csv).not.toContain('"@EVIL')
+    expect(csv).toContain('" =HYPERLINK')
+    expect(csv).toContain('" @EVIL')
+  })
 })
 
 describe('parseBudgetCSV', () => {

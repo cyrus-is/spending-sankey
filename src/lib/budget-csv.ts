@@ -4,6 +4,11 @@ const FORMAT_VERSION = '2'
 
 // ── Build ──────────────────────────────────────────────────────────────────
 
+/** Prevent spreadsheet formula injection: prefix dangerous-start characters with a space. */
+function sanitizeCsvCell(value: string): string {
+  return /^[=+\-@]/.test(value) ? ` ${value}` : value
+}
+
 /** Pure: build a budget CSV string. Includes #-prefixed metadata lines. */
 export function buildBudgetCSV(budget: Budget): string {
   const lines: string[] = []
@@ -19,7 +24,7 @@ export function buildBudgetCSV(budget: Budget): string {
 
   function row(section: string, line: BudgetLine): string {
     const cells = [section, line.category, line.merchant ?? '', line.type, line.amount.toFixed(2), line.notes]
-    return cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
+    return cells.map((c) => `"${sanitizeCsvCell(String(c)).replace(/"/g, '""')}"`).join(',')
   }
 
   for (const line of budget.income) {
