@@ -266,8 +266,8 @@ Combining the 16 open GitHub issues with new findings from this review. Ordered 
 | # | Source | Title | Why |
 |---|--------|-------|-----|
 | 6 | Issue #3 | Fix O(n^2) transfer detection | Freezes browser on large uploads |
-| 7 | Issue #7 | Deduplicate EXPENSE_CATEGORIES | Divergence already exists (sankey.ts omits "Other") |
-| 8 | Issue #6 | Fix budget CSV round-trip merchant field | Budget overlay breaks after reimport |
+| ~~7~~ | ~~Issue #7~~ | ~~Deduplicate EXPENSE_CATEGORIES~~ | Closed — sankey.ts now imports from types.ts, single source of truth |
+| ~~8~~ | ~~Issue #6~~ | ~~Fix budget CSV round-trip merchant field~~ | Closed — Merchant column added to CSV format, round-trip works |
 | 9 | Issue #9 | Add tax categorization caching | Every lens toggle costs 10 API calls |
 | 10 | Issue #4 | Clarify/fix transaction type sent to API | Privacy claim doesn't match behavior |
 | 11 | New: C2 | Add merchant pre-classification lookup | Cut API calls 40-60% for known merchants |
@@ -279,11 +279,11 @@ Combining the 16 open GitHub issues with new findings from this review. Ordered 
 
 | # | Source | Title | Why |
 |---|--------|-------|-----|
-| 15 | Issue #8 | Fix budget overlay ghost rect scaling | Visual inaccuracy in Sankey overlay |
+| ~~15~~ | ~~Issue #8~~ | ~~Fix budget overlay ghost rect scaling~~ | Fixed — weighted average scale across non-clamped nodes |
 | 16 | Issue #11 | Fix exportTaxCSV DOM attachment | Download may not trigger in some browsers |
 | 17 | Issue #16 | Extract state from App.tsx | 560 lines, 20+ state vars — approaching limit |
 | 18 | New: C3 | Add confidence scoring to spending categorization | Let users focus review on uncertain items |
-| 19 | New: C1 | Send amount context to Claude | Improve categorization accuracy |
+| ~~19~~ | ~~New: C1~~ | ~~Send amount context to Claude~~ | Closed — amount already in batch payload and system prompt |
 | 20 | New: E2 | Make parseBatchResponse skip bad items instead of throwing | One bad item shouldn't kill 49 good results |
 | 21 | New: E5 | Add React error boundary | Prevent white-screen crashes |
 | 22 | New: B1 | Split bundle / code-split Anthropic SDK | 116KB of SDK code loads even before user enters API key |
