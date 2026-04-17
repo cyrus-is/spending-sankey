@@ -1,8 +1,10 @@
-# Spending Sankey
+# WhoAteMyPaycheck
 
-Drag-drop your bank CSVs, see where your money goes.
+Drag-drop your bank CSVs, see where your money went.
 
 Export CSVs from your banks and credit cards, drop them in, and get an interactive Sankey diagram of your income and spending — no account linking, no sign-up, no data leaving your browser.
+
+![Sankey diagram showing income flowing into spending categories](images/auto-categorize.png)
 
 ---
 
@@ -10,10 +12,50 @@ Export CSVs from your banks and credit cards, drop them in, and get an interacti
 
 1. **Export CSVs** from your bank(s) — Chase, BofA, Amex, Monzo, credit unions, most others work out of the box
 2. **Drop them in** — the app auto-detects each bank's column layout, date format, and amount convention
-3. **Categorize** — click "Categorize with Claude" and your transactions get sorted into 12 spending categories
-4. **Explore** — interactive Sankey diagram shows income → spending flow; hover over any category for a top-5 vendor breakdown; filter by date range
+3. **Categorize** — click "Categorize with Claude" and your transactions get sorted into spending categories
+4. **Explore** — interactive Sankey diagram shows income → spending flow; hover any category for a top-5 vendor breakdown; filter by date range
 
-The app handles multi-file uploads (checking + credit card + savings in one go), detects transfers between your own accounts so they don't inflate your totals, and lets you override any category it got wrong.
+The app handles multi-file uploads (checking + credit card + savings in one go), detects transfers between your own accounts so they don't inflate your totals, and flags month-over-month spending anomalies automatically.
+
+---
+
+## What you can do with it
+
+### Spending breakdown
+
+The main view maps every dollar from income sources through to spending categories. Subcategories appear on the right in detailed mode. The category filter bar lets you hide large fixed costs (rent, mortgage) to zoom in on discretionary spending.
+
+![Detailed Sankey with category filter and spending insights bar](images/auto-categorize.png)
+
+### Transaction table
+
+Every transaction is listed with its AI-assigned category and subcategory. You can override any category from the dropdown — corrections are reflected immediately in the Sankey.
+
+![Transaction table with categories and subcategories](images/imported-transactions.png)
+
+### Budget vs actual
+
+Generate a budget from your actual spending history — the app detects fixed recurring items (rent, Netflix), variable predictable bills (utilities), and discretionary categories (dining, shopping). Compare against actuals with per-month averages and ↑↓ sentiment indicators.
+
+![Budget vs actual comparison table with avg/month column](images/auto-budget.png)
+
+### US Tax lens
+
+Switch to the Tax (US) lens to see your spending organized by IRS area: Schedule A itemized deductions, Schedule C business expenses, Form 2441 dependent care, HSA-eligible medical, and non-deductible. Export a CSV sorted by tax area to share with your accountant.
+
+![US tax lens Sankey with deductible vs non-deductible breakdown](images/us-tax-view.png)
+
+### Essentials lens
+
+See your spending bucketed into fixed essentials (housing, healthcare), variable essentials (groceries, transport), easy cuts (subscriptions, dining), and discretionary — a quick read on where the flexibility is.
+
+![Essentials lens showing fixed vs discretionary spending](images/essentials-view.png)
+
+### Tax transaction review
+
+The tax lens flags transactions that could fit multiple IRS categories for your review. Pick the right classification for each — the Sankey and export update immediately.
+
+![Tax transaction review panel with flagged items](images/transaction-editing.png)
 
 ---
 
@@ -23,7 +65,7 @@ The app handles multi-file uploads (checking + credit card + savings in one go),
 
 - All CSV parsing and processing runs locally in the page
 - The only outbound network call is to the Claude API for transaction categorization
-- That call sends merchant names and transaction types only — **amounts and account numbers are never sent**
+- That call sends merchant names and amounts only — **account numbers are never sent**
 - Your Claude API key is stored in `sessionStorage` (cleared when you close the tab, never sent anywhere except Anthropic's API)
 - No analytics, no telemetry, no server of any kind
 
@@ -35,12 +77,12 @@ When you click "Categorize", the app sends batches of transaction descriptions i
 
 ```json
 [
-  { "id": "tx-42", "description": "WHOLEFDS MKT #10", "type": "debit" },
-  { "id": "tx-43", "description": "SHELL OIL 57442",  "type": "debit" }
+  { "id": "tx-42", "description": "WHOLEFDS MKT #10", "amount": 47.82 },
+  { "id": "tx-43", "description": "SHELL OIL 57442",  "amount": 62.10 }
 ]
 ```
 
-No dates. No amounts. No account numbers. Claude reads the merchant name and returns a category.
+No dates. No account numbers. Claude reads the merchant name and amount and returns a category.
 
 ---
 
@@ -71,7 +113,7 @@ Most other banks follow one of these patterns and will work without any configur
 
 ## Spending categories
 
-Transactions are sorted into 12 categories:
+Transactions are sorted into 13 categories:
 
 | Category | What goes here |
 |----------|---------------|
@@ -84,6 +126,8 @@ Transactions are sorted into 12 categories:
 | **Health** | Pharmacies, doctors, dentists, gym memberships |
 | **Subscriptions** | Streaming, SaaS, recurring software (Netflix, Spotify, Adobe…) |
 | **Entertainment** | Bars, concerts, events, alcohol |
+| **Childcare** | Daycare, babysitters, after-school programs |
+| **Education** | Tuition, school fees, tutoring, books |
 | **Income** | Salary, side income, interest, tax refunds |
 | **Transfer** | Transfers between your own accounts (auto-detected, excluded from totals) |
 | **Other** | Anything unrecognized |
@@ -109,14 +153,4 @@ npm run lint  # ESLint
 
 ### Sample data
 
-`sample-data/` contains five synthetic CSVs (Chase, BofA, Amex, Credit Union, Monzo) covering a full year of transactions. Drop them all in to test parsing and categorization without using real bank data. See [`sample-data/README.md`](sample-data/README.md) for what each file exercises.
-
----
-
-## What's not built yet
-
-- Budget generation from actual spend (compute monthly averages, detect recurring vs one-time)
-- Budget vs actual overlay on the Sankey
-- Recurring expense detection
-- Export to JSON/CSV
-- Hosted version (self-host for now)
+`public/samples/` contains synthetic CSVs covering a full year of realistic transactions. Drop them in to test parsing and categorization without using real bank data.
