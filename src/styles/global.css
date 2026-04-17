@@ -557,6 +557,24 @@ body {
   font-size: 0.75rem;
 }
 
+.tx-report-wrap {
+  display: block;
+  margin-top: 3px;
+}
+
+.tx-report-link {
+  color: #f6ad55;
+  font-size: 0.7rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.tx-report-link:hover {
+  opacity: 1;
+}
+
 .tx-source {
   color: #718096;
   font-size: 0.75rem;
@@ -638,6 +656,141 @@ body {
   background: #2b6cb0;
   color: white;
   border-color: #3182ce;
+}
+
+.date-filter__how-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #63b3ed;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+
+.date-filter__how-btn:hover {
+  color: #90cdf4;
+}
+
+/* HowItWorksModal */
+.hiw-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.hiw-modal {
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.hiw-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: #718096;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.hiw-close:hover {
+  color: #e2e8f0;
+}
+
+.hiw-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f7fafc;
+  margin-bottom: 24px;
+}
+
+.hiw-section {
+  margin-bottom: 20px;
+}
+
+.hiw-section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #63b3ed;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.hiw-section p {
+  font-size: 0.9rem;
+  color: #cbd5e0;
+  line-height: 1.6;
+}
+
+.hiw-steps {
+  padding-left: 20px;
+  font-size: 0.9rem;
+  color: #cbd5e0;
+  line-height: 1.8;
+}
+
+.hiw-steps code {
+  background: #2d3748;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.82rem;
+  color: #90cdf4;
+}
+
+.hiw-note {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #718096;
+  font-style: italic;
+}
+
+.hiw-list {
+  padding-left: 20px;
+  font-size: 0.9rem;
+  color: #cbd5e0;
+  line-height: 1.8;
+}
+
+.hiw-cta {
+  margin-top: 24px;
+  width: 100%;
+  background: #2b6cb0;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px;
+  transition: background 0.15s;
+}
+
+.hiw-cta:hover {
+  background: #3182ce;
 }
 
 /* SankeyChart */
@@ -1078,6 +1231,173 @@ body {
   font-style: italic;
 }
 
+/* ── Category Visibility Toggle ───────────────────────────────────────────── */
+
+.cat-visibility {
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cat-visibility__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 8px 16px;
+  text-align: left;
+  transition: color 0.15s;
+}
+
+.cat-visibility__toggle:hover {
+  color: #e2e8f0;
+}
+
+.cat-visibility__badge {
+  background: #2d3748;
+  border-radius: 10px;
+  color: #f6ad55;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 7px;
+}
+
+.cat-visibility__chevron {
+  margin-left: auto;
+  font-size: 0.65rem;
+}
+
+.cat-visibility__panel {
+  border-top: 1px solid #2d3748;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 16px 12px;
+}
+
+.cat-visibility__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #2d3748;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 4px 9px;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.cat-visibility__item:hover {
+  background: #3d4f63;
+}
+
+.cat-visibility__item--hidden {
+  opacity: 0.45;
+}
+
+.cat-visibility__name {
+  color: #e2e8f0;
+}
+
+.cat-visibility__amount {
+  color: #718096;
+  font-size: 0.72rem;
+}
+
+.cat-visibility__show-all {
+  background: transparent;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #63b3ed;
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.cat-visibility__show-all:hover {
+  border-color: #63b3ed;
+  color: #90cdf4;
+}
+
+/* ── Anomaly Insights ─────────────────────────────────────────────────────── */
+
+.anomaly-insights {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 10px 16px;
+  flex-wrap: wrap;
+}
+
+.anomaly-insights__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.anomaly-insights__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.anomaly-item {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 0.82rem;
+}
+
+.anomaly-item__arrow {
+  font-size: 0.75rem;
+}
+
+.anomaly-item--above .anomaly-item__arrow,
+.anomaly-item--above .anomaly-item__pct {
+  color: #fc8181;
+}
+
+.anomaly-item--below .anomaly-item__arrow,
+.anomaly-item--below .anomaly-item__pct {
+  color: #68d391;
+}
+
+.anomaly-item__category {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.anomaly-item__pct {
+  font-weight: 700;
+}
+
+.anomaly-item__context {
+  color: #718096;
+}
+
+.anomaly-item__detail {
+  margin-left: 3px;
+  font-size: 0.75rem;
+  color: #4a5568;
+}
+
 /* ── Budget Panel ─────────────────────────────────────────────────────────── */
 
 .budget-panel {
@@ -1395,6 +1715,32 @@ body {
 
 .comparison-diff--bad {
   color: #fc8181;
+}
+
+/* Sentiment indicators (replaces old --good/--bad on individual cells) */
+.comparison-diff {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.sentiment--over,
+.sentiment--bad {
+  color: #fc8181;
+}
+
+.sentiment--under,
+.sentiment--good {
+  color: #68d391;
+}
+
+.sentiment-arrow {
+  font-size: 0.75rem;
+}
+
+.comparison-avg {
+  color: #718096;
+  font-size: 0.82rem;
 }
 
 .comparison-total-row td {

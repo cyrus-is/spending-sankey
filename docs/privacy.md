@@ -60,6 +60,18 @@ Yes. This is an open-source project. You can:
 3. Check the `Content-Security-Policy` header in the page source — it restricts all network access to `'self'` and `api.anthropic.com`
 4. Run it locally: `git clone`, `npm install`, `npm run dev`
 
+## Report Misclassification
+
+If you use the **Report Misclassification** link that appears after correcting a transaction's category, a bug will be opened in a public GitHub repository containing:
+
+- The merchant name / transaction description
+- The amount
+- The transaction type (debit or credit)
+- The original (wrong) category
+- The corrected category
+
+**Do not click "Report Misclassification" if the transaction description contains information you don't want to share publicly.** The issue is visible to anyone on the internet immediately. We use these reports to improve the merchant pre-classifier so the same error is less likely in the future.
+
 ## Self-hosting
 
 If you prefer not to use the hosted version at all, clone the repo and run it locally. The app is a static site — `npm run build` produces a `dist/` folder you can serve from anywhere. No server-side code, no database, no environment variables needed.

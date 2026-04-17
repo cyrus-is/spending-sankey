@@ -39,8 +39,8 @@ export function useBudget(
   const budgetComparison = useMemo(() => {
     if (!budget || !hasCategorized || filteredTransactions.length === 0) return null
     if (!dateRange.start || !dateRange.end) return null
-    return compareBudgetToActual(budget, filteredTransactions, overrides, dateRange)
-  }, [budget, hasCategorized, filteredTransactions, overrides, dateRange])
+    return compareBudgetToActual(budget, filteredTransactions, overrides, dateRange, allTransactions)
+  }, [budget, hasCategorized, filteredTransactions, overrides, dateRange, allTransactions])
 
   const hasEnoughHistory = useMemo(() => {
     if (!minDate || !maxDate) return false

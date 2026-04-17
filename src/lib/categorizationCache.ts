@@ -1,4 +1,4 @@
-const CACHE_KEY = 'spending-sankey:cat-cache'
+const CACHE_KEY = 'whoatemypaycheck:cat-cache'
 
 interface CacheEntry {
   category: string

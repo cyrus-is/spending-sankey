@@ -251,17 +251,60 @@ function formatMonthLabel(iso: string): string {
 
 // ── Budget vs. Actual comparison ──────────────────────────────────────────
 
+/** Returns YYYY-MM string for a Date */
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Compute mean monthly spend per category across all provided transactions. */
+function historicalMonthlyAvgByCategory(
+  transactions: Transaction[],
+  overrides: Record<string, string>,
+): Map<string, number> {
+  const byMonth = new Map<string, Map<string, number>>()
+  for (const tx of transactions) {
+    const cat = overrides[tx.id] ?? tx.category
+    if (cat === 'Transfer') continue
+    const mk = monthKey(tx.date)
+    if (!byMonth.has(mk)) byMonth.set(mk, new Map())
+    byMonth.get(mk)!.set(cat, (byMonth.get(mk)!.get(cat) ?? 0) + tx.amount)
+  }
+  const numMonths = byMonth.size
+  if (numMonths < 2) return new Map()
+
+  const totals = new Map<string, number>()
+  for (const monthly of byMonth.values()) {
+    for (const [cat, amt] of monthly) {
+      totals.set(cat, (totals.get(cat) ?? 0) + amt)
+    }
+  }
+  const avg = new Map<string, number>()
+  for (const [cat, total] of totals) {
+    avg.set(cat, total / numMonths)
+  }
+  return avg
+}
+
 /**
  * Compare a budget against actual transactions for a given date range.
  * Actuals are normalized to a per-month rate.
+ *
+ * @param allTransactions  Full history used to compute historical monthly averages (optional).
+ *                         Pass undefined to omit the avgPerMonth column.
  */
 export function compareBudgetToActual(
   budget: Budget,
   transactions: Transaction[],
   overrides: Record<string, string>,
   dateRange: { start: string; end: string },
+  allTransactions?: Transaction[],
 ): BudgetComparisonResult {
   const numMonths = countMonths(dateRange.start, dateRange.end)
+
+  // Historical averages from full transaction history (if provided)
+  const historicalAvg = allTransactions
+    ? historicalMonthlyAvgByCategory(allTransactions, overrides)
+    : new Map<string, number>()
 
   // Apply overrides and filter
   const txns = transactions.map((tx) => ({ ...tx, category: overrides[tx.id] ?? tx.category }))
@@ -292,6 +335,7 @@ export function compareBudgetToActual(
     const actualTotal = actualIncomeBySource.get(line.category) ?? 0
     const actual = actualTotal / numMonths
     const difference = actual - line.amount  // positive = earned more than budgeted (good)
+    const avg = historicalAvg.get(line.category)
     lines.push({
       category: line.category,
       type: line.type,
@@ -300,6 +344,7 @@ export function compareBudgetToActual(
       difference: Math.round(difference * 100) / 100,
       percentUsed: line.amount > 0 ? Math.round((actual / line.amount) * 100) : Infinity,
       section: 'income',
+      ...(avg !== undefined ? { avgPerMonth: Math.round(avg * 100) / 100 } : {}),
     })
   }
 
@@ -329,6 +374,7 @@ export function compareBudgetToActual(
 
     // Use the most specific type for display
     const type = budgetedLines[0]?.type ?? 'variable-discretionary'
+    const avg = historicalAvg.get(category)
 
     lines.push({
       category,
@@ -338,6 +384,7 @@ export function compareBudgetToActual(
       difference: Math.round(difference * 100) / 100,
       percentUsed: budgeted > 0 ? Math.round((actual / budgeted) * 100) : Infinity,
       section: 'expenses',
+      ...(avg !== undefined ? { avgPerMonth: Math.round(avg * 100) / 100 } : {}),
     })
   }
 

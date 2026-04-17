@@ -27,7 +27,7 @@ function makeBudget(overrides: Partial<Budget> = {}): Budget {
 describe('buildBudgetCSV', () => {
   it('includes metadata comment lines', () => {
     const csv = buildBudgetCSV(makeBudget())
-    expect(csv).toContain('# Spending Sankey Budget Export')
+    expect(csv).toContain('# WhoAteMyPaycheck Budget Export')
     expect(csv).toContain('# Generated: 2024-04-01')
     expect(csv).toContain('# Source data: 2024-01-01 to 2024-03-31')
     expect(csv).toContain('# Version: 2')

@@ -26,6 +26,7 @@ export interface CategorizationState {
   modeChanged: boolean
   uncategorizedCount: number
   showCategorizeBtn: boolean
+  setAppState: (s: AppState) => void
   abortRef: React.MutableRefObject<AbortController | null>
   handleFiles: (newFiles: File[]) => Promise<void>
   handleRemove: (id: string) => void
@@ -199,6 +200,7 @@ export function useCategorization(apiKey: string): CategorizationState {
     modeChanged,
     uncategorizedCount,
     showCategorizeBtn,
+    setAppState,
     abortRef,
     handleFiles,
     handleRemove,

@@ -19,12 +19,31 @@ import { buildSankeyData } from './lib/sankey'
 import { useCategorization } from './hooks/useCategorization'
 import { useTaxLens } from './hooks/useTaxLens'
 import { useBudget } from './hooks/useBudget'
+import { HowItWorksModal, getHowItWorksSeen, markHowItWorksSeen } from './components/HowItWorksModal'
+import { AnomalyInsights } from './components/AnomalyInsights'
+import { detectAnomalies } from './lib/anomaly'
+import { CategoryVisibilityToggle } from './components/CategoryVisibilityToggle'
+import { EXPENSE_CATEGORIES } from './lib/types'
 
 export function App() {
   const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey())
   const [dateRange, setDateRange] = useState<DateRange>({ start: '', end: '' })
   const [mergeThreshold, setMergeThreshold] = useState(0.02)
   const [activeLens, setActiveLens] = useState<LensId>('spending')
+  const [showHowItWorks, setShowHowItWorks] = useState<boolean>(() => !getHowItWorksSeen())
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('whoatemypaycheck:hidden-categories')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
+  })
+
+  const handleHiddenCategoriesChange = useCallback((next: Set<string>) => {
+    setHiddenCategories(next)
+    try {
+      localStorage.setItem('whoatemypaycheck:hidden-categories', JSON.stringify([...next]))
+    } catch { /* ignore */ }
+  }, [])
 
   const cat = useCategorization(apiKey)
   const tax = useTaxLens()
@@ -55,6 +74,30 @@ export function App() {
     )
   }, [cat.allTransactions, dateRange])
 
+  // Categories present in the current filtered view (for the visibility toggle)
+  const spendingCategories = useMemo(() => {
+    if (!cat.hasCategorized || activeLens !== 'spending') return []
+    const totals = new Map<string, number>()
+    for (const tx of filteredTransactions) {
+      const c = cat.overrides[tx.id] ?? tx.category
+      if (!EXPENSE_CATEGORIES.has(c)) continue
+      if (tx.type !== 'debit') continue
+      totals.set(c, (totals.get(c) ?? 0) + tx.amount)
+    }
+    return [...totals.entries()]
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount)
+  }, [cat.hasCategorized, activeLens, filteredTransactions, cat.overrides])
+
+  // Transactions passed to Sankey — excludes hidden categories (spending lens only)
+  const sankeyTransactions = useMemo(() => {
+    if (hiddenCategories.size === 0 || activeLens !== 'spending') return filteredTransactions
+    return filteredTransactions.filter((tx) => {
+      const c = cat.overrides[tx.id] ?? tx.category
+      return !hiddenCategories.has(c)
+    })
+  }, [filteredTransactions, hiddenCategories, activeLens, cat.overrides])
+
   const budget = useBudget(
     cat.allTransactions,
     filteredTransactions,
@@ -70,6 +113,12 @@ export function App() {
     setApiKey(key)
   }, [])
 
+  const handleHowItWorks = useCallback(() => setShowHowItWorks(true), [])
+  const handleCloseHowItWorks = useCallback(() => {
+    markHowItWorksSeen()
+    setShowHowItWorks(false)
+  }, [])
+
   const handleLensChange = useCallback(async (lens: LensId) => {
     setActiveLens(lens)
     if (lens === 'tax-us') {
@@ -78,12 +127,11 @@ export function App() {
         apiKey,
         cat.abortRef,
         cat.setError,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        cat.appState as any,
+        cat.setAppState,
       )
       if (!ok) setActiveLens('spending')
     }
-  }, [tax, cat.allTransactions, apiKey, cat.abortRef, cat.setError, cat.appState])
+  }, [tax, cat.allTransactions, apiKey, cat.abortRef, cat.setError, cat.setAppState])
 
   // Essentials lens: remap each tx to its bucket
   const essentialsColors = useMemo(
@@ -110,10 +158,10 @@ export function App() {
   const sankeyData = useMemo(() => {
     if (!cat.hasCategorized) return null
     if (activeLens === 'essentials') {
-      return buildSankeyData(filteredTransactions, essentialsOverrides, mergeThreshold, essentialsColors)
+      return buildSankeyData(sankeyTransactions, essentialsOverrides, mergeThreshold, essentialsColors)
     }
     if (activeLens === 'tax-us' && tax.taxResults) {
-      const data = buildSankeyData(filteredTransactions, taxCategoryMap, mergeThreshold, tax.taxColors)
+      const data = buildSankeyData(sankeyTransactions, taxCategoryMap, mergeThreshold, tax.taxColors)
       const deductibleIds = new Set(['schedule-a', 'schedule-c', 'form-2441', 'hsa-medical'])
       let totalDeductible = 0
       let totalNonDeductible = 0
@@ -127,24 +175,31 @@ export function App() {
       return { ...data, totalDeductible, totalNonDeductible }
     }
     return buildSankeyData(
-      filteredTransactions,
+      sankeyTransactions,
       cat.overrides,
       mergeThreshold,
       {},
       cat.categorizationMode,
     )
   }, [
-    cat.hasCategorized, activeLens, filteredTransactions, cat.overrides,
+    cat.hasCategorized, activeLens, sankeyTransactions, cat.overrides,
     essentialsOverrides, essentialsColors, tax.taxResults, taxCategoryMap,
     tax.taxColors, mergeThreshold, cat.categorizationMode,
   ])
 
   const sankeyIsEmpty = sankeyData !== null && sankeyData.nodes.length <= 1
 
+  const anomalies = useMemo(
+    () => cat.hasCategorized && activeLens === 'spending'
+      ? detectAnomalies(cat.allTransactions, filteredTransactions, dateRange, cat.overrides)
+      : [],
+    [cat.hasCategorized, cat.allTransactions, filteredTransactions, dateRange, cat.overrides, activeLens],
+  )
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Spending Sankey</h1>
+        <h1>WhoAteMyPaycheck</h1>
         <p className="tagline">Drag-drop your bank CSVs, see where your money goes.</p>
       </header>
 
@@ -272,6 +327,7 @@ export function App() {
             minDate={minDate}
             maxDate={maxDate}
             onChange={setDateRange}
+            onHowItWorks={handleHowItWorks}
           />
         )}
 
@@ -299,6 +355,14 @@ export function App() {
               Show budget limits on chart
             </label>
           </div>
+        )}
+
+        {spendingCategories.length > 0 && (
+          <CategoryVisibilityToggle
+            categories={spendingCategories}
+            hidden={hiddenCategories}
+            onChange={handleHiddenCategoriesChange}
+          />
         )}
 
         {sankeyIsEmpty ? (
@@ -348,6 +412,8 @@ export function App() {
           </>
         )}
 
+        <AnomalyInsights anomalies={anomalies} />
+
         <BudgetPanel
           budget={budget.budget}
           comparison={budget.budgetComparison}
@@ -369,6 +435,8 @@ export function App() {
           <RawTable files={cat.files} onRemove={cat.handleRemove} />
         )}
       </main>
+
+      <HowItWorksModal open={showHowItWorks} onClose={handleCloseHowItWorks} />
     </div>
   )
 }

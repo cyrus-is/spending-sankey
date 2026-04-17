@@ -1,6 +1,6 @@
 import type { Budget } from './budget-types'
 
-const BUDGET_KEY = 'spending-sankey:budget'
+const BUDGET_KEY = 'whoatemypaycheck:budget'
 
 export function saveBudget(budget: Budget): void {
   localStorage.setItem(BUDGET_KEY, JSON.stringify(budget))

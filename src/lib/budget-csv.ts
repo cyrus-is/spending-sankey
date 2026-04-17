@@ -9,7 +9,7 @@ export function buildBudgetCSV(budget: Budget): string {
   const lines: string[] = []
 
   // Metadata header
-  lines.push('# Spending Sankey Budget Export')
+  lines.push('# WhoAteMyPaycheck Budget Export')
   lines.push(`# Generated: ${budget.generatedAt}`)
   lines.push(`# Source data: ${budget.sourceRange.start} to ${budget.sourceRange.end}`)
   lines.push(`# Version: ${FORMAT_VERSION}`)

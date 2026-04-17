@@ -1,6 +1,6 @@
 import type { TaxArea } from './types'
 
-const CACHE_KEY = 'spending-sankey:tax-cache'
+const CACHE_KEY = 'whoatemypaycheck:tax-cache'
 
 interface TaxCacheEntry {
   taxArea: TaxArea

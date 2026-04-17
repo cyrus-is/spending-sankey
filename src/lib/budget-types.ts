@@ -72,6 +72,8 @@ export interface BudgetComparison {
   /** actual / budgeted × 100; Infinity when budgeted is 0 */
   percentUsed: number
   section: 'income' | 'expenses'
+  /** Mean monthly spend/income across all loaded history (undefined if <2 months of data) */
+  avgPerMonth?: number
 }
 
 /** Aggregated result from compareBudgetToActual */

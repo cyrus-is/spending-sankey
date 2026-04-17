@@ -10,6 +10,7 @@ interface DateFilterProps {
   minDate: string
   maxDate: string
   onChange: (range: DateRange) => void
+  onHowItWorks?: () => void
 }
 
 /** Format a local Date as YYYY-MM-DD without UTC conversion */
@@ -37,7 +38,7 @@ function lastCompleteMonthEnd(maxDate: string): Date {
   return new Date(d.getFullYear(), d.getMonth(), 0)
 }
 
-export function DateFilter({ range, minDate, maxDate, onChange }: DateFilterProps) {
+export function DateFilter({ range, minDate, maxDate, onChange, onHowItWorks }: DateFilterProps) {
   const handleStart = (e: ChangeEvent<HTMLInputElement>) =>
     onChange({ ...range, start: e.target.value })
 
@@ -127,6 +128,15 @@ export function DateFilter({ range, minDate, maxDate, onChange }: DateFilterProp
           className={`date-filter__btn${active === '1mo' ? ' date-filter__btn--active' : ''}`}
           onClick={setLastMonth}
         >Last month</button>
+        {onHowItWorks && (
+          <button
+            className="date-filter__how-btn"
+            onClick={onHowItWorks}
+            title="How WhoAteMyPaycheck works"
+          >
+            ? How it works
+          </button>
+        )}
       </div>
     </div>
   )
