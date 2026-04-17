@@ -20,8 +20,7 @@ import { useCategorization } from './hooks/useCategorization'
 import { useTaxLens } from './hooks/useTaxLens'
 import { useBudget } from './hooks/useBudget'
 import { HowItWorksModal } from './components/HowItWorksModal'
-import { LandingPreview } from './components/LandingPreview'
-import { getHowItWorksSeen, markHowItWorksSeen } from './lib/howItWorksSeen'
+import { getHowItWorksSeen } from './lib/howItWorksSeen'
 import { AnomalyInsights } from './components/AnomalyInsights'
 import { detectAnomalies } from './lib/anomaly'
 import { CategoryVisibilityToggle } from './components/CategoryVisibilityToggle'
@@ -117,7 +116,6 @@ export function App() {
   }, [])
 
   const handleCloseHowItWorks = useCallback(() => {
-    markHowItWorksSeen()
     setShowHowItWorks(false)
   }, [])
 
@@ -221,10 +219,6 @@ export function App() {
           onFiles={cat.handleFiles}
           disabled={cat.appState === 'categorizing' || cat.appState === 'loading'}
         />
-
-        {cat.files.length === 0 && cat.appState !== 'loading' && (
-          <LandingPreview />
-        )}
 
         {cat.appState === 'loading' && (
           <div className="loading-state">

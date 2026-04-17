@@ -1,4 +1,33 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { markHowItWorksSeen } from '../lib/howItWorksSeen'
+
+const SLIDES = [
+  {
+    src: '/images/imported-transactions.png',
+    title: 'See where your money flows',
+    desc: 'A Sankey diagram turns your CSV exports into an instant picture of income sources vs. spending categories.',
+  },
+  {
+    src: '/images/auto-categorize.png',
+    title: 'Auto-categorize in seconds',
+    desc: "Claude reads your merchant names and assigns categories — no rules to write, no manual tagging.",
+  },
+  {
+    src: '/images/auto-budget.png',
+    title: 'Build a budget from reality',
+    desc: 'Generate a monthly budget from your actual spending patterns, then track against it next month.',
+  },
+  {
+    src: '/images/us-tax-view.png',
+    title: 'Tax deduction lens',
+    desc: 'Switch to the tax view to spot deductible expenses and export a CPA-ready CSV in one click.',
+  },
+  {
+    src: '/images/essentials-view.png',
+    title: 'Needs vs. wants',
+    desc: 'The essentials lens separates fixed commitments from variable and discretionary spending.',
+  },
+]
 
 interface HowItWorksModalProps {
   open: boolean
@@ -6,6 +35,8 @@ interface HowItWorksModalProps {
 }
 
 export function HowItWorksModal({ open, onClose }: HowItWorksModalProps) {
+  const [slide, setSlide] = useState(0)
+
   // Close on Escape
   useEffect(() => {
     if (!open) return
@@ -14,12 +45,51 @@ export function HowItWorksModal({ open, onClose }: HowItWorksModalProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  // Reset carousel when modal reopens
+  useEffect(() => { if (open) setSlide(0) }, [open])
+
   if (!open) return null
 
+  const prev = () => setSlide((s) => (s - 1 + SLIDES.length) % SLIDES.length)
+  const next = () => setSlide((s) => (s + 1) % SLIDES.length)
+
+  const handleClose = () => {
+    markHowItWorksSeen()
+    onClose()
+  }
+
   return (
-    <div className="hiw-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="How WhoAteMyPaycheck works">
+    <div className="hiw-backdrop" onClick={handleClose} role="dialog" aria-modal="true" aria-label="How WhoAteMyPaycheck works">
       <div className="hiw-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="hiw-close" onClick={onClose} aria-label="Close">✕</button>
+        <button className="hiw-close" onClick={handleClose} aria-label="Close">✕</button>
+
+        {/* Screenshot carousel */}
+        <div className="hiw-carousel">
+          <div className="hiw-carousel__img-wrap">
+            <img
+              key={slide}
+              src={SLIDES[slide].src}
+              alt={SLIDES[slide].title}
+              className="hiw-carousel__img"
+            />
+            <button className="hiw-carousel__arrow hiw-carousel__arrow--prev" onClick={prev} aria-label="Previous">‹</button>
+            <button className="hiw-carousel__arrow hiw-carousel__arrow--next" onClick={next} aria-label="Next">›</button>
+          </div>
+          <div className="hiw-carousel__caption">
+            <strong className="hiw-carousel__caption-title">{SLIDES[slide].title}</strong>
+            <span className="hiw-carousel__caption-desc">{SLIDES[slide].desc}</span>
+          </div>
+          <div className="hiw-carousel__dots">
+            {SLIDES.map((_, i) => (
+              <button
+                key={i}
+                className={`hiw-carousel__dot${i === slide ? ' hiw-carousel__dot--active' : ''}`}
+                onClick={() => setSlide(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </div>
 
         <h2 className="hiw-title">We care about your privacy</h2>
 
@@ -89,9 +159,8 @@ export function HowItWorksModal({ open, onClose }: HowItWorksModalProps) {
           </ol>
         </section>
 
-        <button className="hiw-cta" onClick={onClose}>Got it</button>
+        <button className="hiw-cta" onClick={handleClose}>Got it</button>
       </div>
     </div>
   )
 }
-
