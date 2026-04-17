@@ -97,5 +97,5 @@ export function normalizeSource(description: string): string {
   if (/dividend/i.test(description)) return 'Dividends'
   if (/zelle|venmo|cashapp|paypal/i.test(description)) return 'Peer Transfer'
   if (/refund|return/i.test(description)) return 'Refunds'
-  return description.length > 30 ? description.substring(0, 30) + '…' : description
+  return description.length > 28 ? description.substring(0, 28) + '…' : description
 }

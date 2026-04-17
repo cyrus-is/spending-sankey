@@ -53,6 +53,8 @@ export function exportTaxCSV(
   const a = document.createElement('a')
   a.href = url
   a.download = 'tax-export.csv'
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }

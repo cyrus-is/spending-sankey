@@ -155,8 +155,23 @@ export function parseDate(raw: string, dateOrder: 'mdy' | 'dmy' = 'mdy'): Date {
   }
 
   // Month DD, YYYY: "Jan 15, 2024" or "January 15, 2024"
-  const d = new Date(s)
-  if (!isNaN(d.getTime())) return d
+  // Parse ourselves to avoid locale-dependent new Date(s) behaviour
+  const MONTHS: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+    january: 1, february: 2, march: 3, april: 4, june: 6,
+    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+  }
+  const monthNameMatch = s.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/)
+  if (monthNameMatch) {
+    const month = MONTHS[monthNameMatch[1].toLowerCase()]
+    const day = parseInt(monthNameMatch[2])
+    const year = parseInt(monthNameMatch[3])
+    if (month) {
+      const d = new Date(year, month - 1, day)
+      if (!isNaN(d.getTime())) return d
+    }
+  }
 
   throw new Error(`Cannot parse date: "${raw}"`)
 }

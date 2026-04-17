@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { taxCategorize } from './tax-us'
+import { clearTaxCache } from './taxCache'
 import type { Transaction } from '../types'
 
 // Mock the Anthropic SDK
@@ -37,6 +38,7 @@ describe('taxCategorize', () => {
   beforeEach(async () => {
     const mockCreate = await getMockCreate()
     mockCreate.mockReset()
+    clearTaxCache()
   })
 
   it('parses a well-formed tax response', async () => {

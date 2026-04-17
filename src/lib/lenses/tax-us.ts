@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Transaction } from '../types'
 import type { TaxArea, TaxResult } from './types'
+import { getTaxCached, setTaxCached } from './taxCache'
 
 const TAX_AREA_IDS: TaxArea[] = [
   'schedule-a',
@@ -167,15 +168,28 @@ export async function taxCategorize(
   const allResults: TaxResult[] = []
   let done = 0
 
-  // Split into batches
+  // Resolve cache hits first — only send misses to Claude
+  const cacheMisses: Transaction[] = []
+  for (const tx of transactions) {
+    const cached = getTaxCached(tx.description, tx.amount)
+    if (cached) {
+      allResults.push({ id: tx.id, ...cached })
+      done++
+    } else {
+      cacheMisses.push(tx)
+    }
+  }
+  onProgress?.(done, total)
+
+  // Split misses into batches
   const batches: Transaction[][] = []
-  for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
-    batches.push(transactions.slice(i, i + BATCH_SIZE))
+  for (let i = 0; i < cacheMisses.length; i += BATCH_SIZE) {
+    batches.push(cacheMisses.slice(i, i + BATCH_SIZE))
   }
 
   const runBatch = async (batch: Transaction[]): Promise<TaxResult[]> => {
     if (signal?.aborted) throw new Error('Tax categorization cancelled.')
-    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, type: tx.type, amount: tx.amount }))
+    const items = batch.map((tx) => ({ id: tx.id, description: tx.description, amount: tx.amount }))
     const requestedIds = batch.map((tx) => tx.id)
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -184,7 +198,14 @@ export async function taxCategorize(
       messages: [{ role: 'user', content: JSON.stringify(items) }],
     })
     const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
-    return parseBatchResponse(text, requestedIds)
+    const results = parseBatchResponse(text, requestedIds)
+    // Write results to cache
+    const txMap = new Map(batch.map((tx) => [tx.id, tx]))
+    for (const r of results) {
+      const tx = txMap.get(r.id)
+      if (tx) setTaxCached(tx.description, tx.amount, { taxArea: r.taxArea, ambiguous: r.ambiguous })
+    }
+    return results
   }
 
   // Run batches with bounded concurrency
