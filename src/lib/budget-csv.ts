@@ -45,9 +45,7 @@ export function exportBudgetCSV(budget: Budget): void {
   const link = document.createElement('a')
   link.href = url
   link.download = `${budget.name.replace(/[^a-zA-Z0-9]+/g, '-')}.csv`
-  document.body.appendChild(link)
   link.click()
-  document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 
