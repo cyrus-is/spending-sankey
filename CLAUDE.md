@@ -125,3 +125,7 @@ npm run lint
 ### CSS
 - Keep it minimal for MVP — ship ugly before shipping never
 - Responsive is a nice-to-have, not a blocker
+
+## Credentials
+
+GitHub PATs, AWS tokens, Cloudflare keys, and similar credentials referenced by this project live at `~/.claude/pats/` on the Mac Mini (gitignored). Some entries are symlinks to the canonical tool locations.
